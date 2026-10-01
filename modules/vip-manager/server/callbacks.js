@@ -36,10 +36,21 @@
 
         const metadata = player.PlayerData.metadata || {};
         const vipTier = metadata.vip || 'nenhum';
-        const coins = (player.PlayerData.money && player.PlayerData.money.coin) ? player.PlayerData.money.coin : 0;
+        let gems = 0;
+        try {
+            if (GetResourceState('dp_sistema_gemas') === 'started') {
+                gems = exports['dp_sistema_gemas'].GetGems(source) || 0;
+            }
+        } catch (e) {
+            gems = 0;
+        }
+        if (!gems && player.PlayerData.money && player.PlayerData.money.coin) {
+            gems = player.PlayerData.money.coin;
+        }
+        const coins = gems;
         const cid = player.PlayerData.citizenid;
 
-        console.log(`[vanguard_esc] DEBUG: Player CID [${cid}] | Source [${source}] | Metadata VIP: [${vipTier}]`);
+        console.log(`[vanguard_esc] DEBUG: Player CID [${cid}] | Source [${source}] | Metadata VIP: [${vipTier}] | Gems: [${gems}]`);
 
         const safeParse = (data) => {
             if (typeof data === 'object' && data !== null) return data;
@@ -111,6 +122,7 @@
             salary: currentVipInfo.payment || 0,
             inventory: currentVipInfo.inventory || 0,
             coins: coins,
+            gems: gems,
             benefits: currentVipInfo.benefits || [],
             interval: bridge.GetPaycheckInterval ? bridge.GetPaycheckInterval() : 30,
             timeLeft: bridge.GetSyncedTimeLeft ? bridge.GetSyncedTimeLeft() : 0,
@@ -164,17 +176,23 @@
 
     lib.callback.register('mri_esc:admin:getItems', (source) => {
         if (!bridge.IsAdminPlayer(source)) return [];
-        const items = exports.ox_inventory.Items();
         const list = [];
-        for (const [name, data] of Object.entries(items)) {
-            list.push({
-                name: name,
-                label: data.label || name,
-                weight: data.weight || 0,
-                description: data.description || ""
-            });
+        try {
+            if (GetResourceState('ox_inventory') === 'started' && exports.ox_inventory && exports.ox_inventory.Items) {
+                const items = exports.ox_inventory.Items() || {};
+                for (const [name, data] of Object.entries(items)) {
+                    list.push({
+                        name: name,
+                        label: data.label || name,
+                        weight: data.weight || 0,
+                        description: data.description || ""
+                    });
+                }
+                list.sort((a, b) => a.label.localeCompare(b.label));
+            }
+        } catch (err) {
+            console.error('[vanguard_esc] Erro ao carregar itens do ox_inventory:', err.message || err);
         }
-        list.sort((a, b) => a.label.localeCompare(b.label));
         return list;
     });
 

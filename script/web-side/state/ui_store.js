@@ -10,7 +10,7 @@ document.addEventListener('alpine:init', () => {
         adminList: [],
         player: { 
             name: '', id: '', job: 'Desempregado', 
-            money: 0, bank: 0, playersOn: 0 
+            money: 0, bank: 0, gems: 0, playersOn: 0 
         },
         mira: {
             ativo: false, tamanho: 12, gap: 4, espessura: 2,
@@ -141,6 +141,13 @@ document.addEventListener('alpine:init', () => {
         },
 
         formatMoney(val) { return Utils.formatMoney(val); },
+        formatGems(val) {
+            if (val === undefined || val === null || isNaN(val)) return '0';
+            return Number(val).toLocaleString('pt-BR');
+        },
+        openGemasStore() {
+            Nui.post('openGemas');
+        },
 
         destroy() {
             if (this.paycheckInterval) {

@@ -10,7 +10,7 @@
 	<link
 		href="https://fonts.googleapis.com/css2?family=Sora:wght@100..800&family=Urbanist:ital,wght@0,100..900;1,100..900&display=swap"
 		rel="stylesheet">
-	<link href="css.css" rel="stylesheet" type="text/css" />
+	<link href="css.css?v=5.2" rel="stylesheet" type="text/css" />
 </head>
 
 <body x-data="appRoot()">
@@ -31,8 +31,7 @@
 
 			<!-- Logo -->
 			<div class="sidebar-logo">
-				<div class="logo-wordmark">MRI</div>
-				<div class="logo-subtitle">ROLEPLAY</div>
+				<img src="assets/distrito_logo.png?v=5.0" alt="Distrito Paulista" class="sidebar-logo-img">
 			</div>
 
 			<!-- Player Profile -->
@@ -44,15 +43,15 @@
 					</div>
 				</div>
 				<div class="profile-name" x-text="store.player.name"></div>
-				<div class="profile-id">Cód. <span x-text="store.player.id"></span></div>
+				<div class="profile-id">Cód, <span x-text="store.player.id"></span></div>
 				<div class="profile-job">
-					<i class="fa-solid fa-briefcase"></i>
+					<i class="fa-solid fa-wrench"></i>
 					<span x-text="store.player.job"></span>
 				</div>
 			</div>
 
 			<!-- VIP Highlights (Fixo acima das finanças) -->
-			<div class="sidebar-shortcuts" style="padding: 0 16px; margin-top: 10px;">
+			<div class="sidebar-shortcuts">
 				<!-- VIP call-to-action (sem VIP) -->
 				<div class="sidebar-vip-cta" x-show="store.vip.tier === 'nenhum'" @click="store.activeTab = 'vip'">
 					<div class="svip-shine"></div>
@@ -82,16 +81,24 @@
 				<div class="finance-row">
 					<div class="finance-icon"><i class="fa-solid fa-wallet"></i></div>
 					<div class="finance-info">
-						<div class="finance-label">Carteira</div>
+						<div class="finance-label">CARTEIRA</div>
 						<div class="finance-value" x-text="store.formatMoney(store.player.money)"></div>
 					</div>
 				</div>
 				<div class="finance-row">
 					<div class="finance-icon bank-icon"><i class="fa-solid fa-building-columns"></i></div>
 					<div class="finance-info">
-						<div class="finance-label">Banco</div>
+						<div class="finance-label">BANCO</div>
 						<div class="finance-value" x-text="store.formatMoney(store.player.bank)"></div>
 					</div>
+				</div>
+				<div class="finance-row finance-gems" @click="openGemasStore()" title="Abrir Loja de Gemas">
+					<div class="finance-icon gems-icon"><img src="assets/gem_diamond.png?v=5.1" alt="Gemas" class="gems-finance-img"></div>
+					<div class="finance-info">
+						<div class="finance-label">GEMAS</div>
+						<div class="finance-value gems-value" x-text="store.formatGems(store.player.gems) + ' Gemas'"></div>
+					</div>
+					<div class="finance-gems-btn"><i class="fa-solid fa-chevron-right"></i></div>
 				</div>
 			</div>
 
@@ -107,6 +114,13 @@
 							x-text="store.vip.tier !== 'nenhum' ? store.vip.label : 'SEJA VIP'"></span></div>
 				</div>
 
+				<!-- Loja de Gemas (Destaque) -->
+				<div class="nav-item nav-gems-item" @click="openGemasStore()" title="Abrir Loja de Gemas">
+					<div class="nav-item-icon gems-nav-icon"><img src="assets/gem_diamond.png?v=5.1" alt="Gemas" class="gems-nav-img"></div>
+					<span class="nav-item-label">LOJA DE GEMAS</span>
+					<div class="nav-gems-pill">LOJA</div>
+				</div>
+
 				<!-- Início (Fixo) -->
 				<div class="nav-item" :class="{ 'nav-active': store.activeTab === 'inicio' }"
 					@click="store.activeTab = 'inicio'">
@@ -117,7 +131,7 @@
 
 				<!-- Dynamic Tabs (MAPA, CONFIGURAÇÕES, etc) -->
 				<template x-for="tab in store.tabs" :key="tab.id">
-					<div x-show="!['customizacao', 'inicio', 'vip'].includes(tab.id)" class="nav-item"
+					<div x-show="!['customizacao', 'inicio', 'vip', 'gemas', 'loja_gemas'].includes(tab.id)" class="nav-item"
 						:class="{ 'nav-active': store.activeTab === tab.id }" @click="handleTabClick(tab)">
 						<div class="nav-item-icon">
 							<i :class="'fa-solid ' + (tab.icon.startsWith('fa-') ? tab.icon : 'fa-' + tab.icon)"></i>
@@ -168,46 +182,25 @@
 			<div class="panel-content" x-show="store.activeTab === 'inicio'" x-transition.opacity>
 
 				<div class="panel-heading">
-					<div class="panel-title"><i class="fa-solid fa-house-chimney"></i> BEM-VINDO</div>
-					<div class="panel-subtitle" x-text="'Olá, ' + store.player.name + '. O que deseja fazer hoje?'">
-					</div>
+					<div class="panel-title"><i class="fa-solid fa-house"></i> BEM-VINDO</div>
+					<div class="panel-subtitle" x-text="'Olá, ' + store.player.name + '. O que deseja fazer hoje?'"></div>
 				</div>
 
 				<div class="quick-grid">
-					<div class="quick-card" style="position: relative; width: 100%; min-height: 120px; overflow: hidden; border-radius: 12px; cursor: pointer; padding: 0;" @click="Nui.post('openNativeMap')">
-						
-						<div style="position: absolute; inset: 0; z-index: 0; pointer-events: none;">
-							<gta-v-map 
-								id="meu-mapa" 
-								zoom="4" 
-								default-style="satellite" 
-								satellite-url="assets/styleSatelite/{z}/{x}/{y}.webp" 
-								style="display: block; width: 100%; height: 100%;">
-							</gta-v-map>
-						</div>
-
-						<div style="position: absolute; inset: 0; z-index: 1; pointer-events: none; background: linear-gradient(90deg, rgba(15, 23, 42, 1) 0%, rgba(15, 23, 42, 0.7) 35%, transparent 65%);"></div>
-
-						<div style="position: relative; z-index: 2; padding: 24px; pointer-events: none; width: 100%; height: 100%; display: flex; flex-direction: column;">
-							<div class="qc-glow" style="--glow-color: var(--blue); pointer-events: none;"></div>
-							<div class="qc-icon blue-icon"><i class="fa-solid fa-map"></i></div>
+					<!-- MAPA GPS -->
+					<div class="quick-card quick-card-map" @click="Nui.post('openNativeMap')">
+						<div class="qc-artwork qc-art-map"></div>
+						<div class="qc-content">
+							<div class="qc-icon gold-icon"><i class="fa-solid fa-map"></i></div>
 							<div class="qc-title">MAPA GPS</div>
 							<div class="qc-desc">Visão geral da cidade</div>
-							<div class="qc-arrow"><i class="fa-solid fa-arrow-right"></i></div>
 						</div>
-
-						<div style="position: absolute; top: 50%; left: 50%; z-index: 3; pointer-events: none;">
-							<svg width="45" height="45" viewBox="0 0 100 100" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); filter: drop-shadow(2px 4px 3px rgba(0,0,0,0.6));">
-								<path d="M 45,15 C 70,10 90,25 85,55 C 80,85 40,95 20,75 C 5,50 15,20 45,15 Z" fill="none" stroke="#ef4444" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
-							</svg>
-							<span style="position: absolute; top: 50%; left: 28px; transform: translateY(-50%); color: white; font-weight: 800; font-size: 13px; text-transform: uppercase; text-shadow: 1px 1px 2px black, -1px -1px 2px black, 0px 2px 4px rgba(0,0,0,0.8); white-space: nowrap;">
-								Você está aqui
-							</span>
-						</div>
+						<div class="qc-arrow"><i class="fa-solid fa-arrow-right"></i></div>
 					</div>
 
+					<!-- VIP STATUS -->
 					<div class="quick-card quick-card-vip" @click="store.activeTab = 'vip'">
-						<div class="qc-glow" style="--glow-color: var(--gold);"></div>
+						<div class="qc-artwork qc-art-crown"></div>
 						<div class="qc-badge">EXCLUSIVO</div>
 						<div class="qc-icon gold-icon"><i class="fa-solid fa-crown"></i></div>
 						<div class="qc-title">VIP STATUS</div>
@@ -217,34 +210,50 @@
 						<div class="qc-arrow"><i class="fa-solid fa-arrow-right"></i></div>
 					</div>
 
-					<div class="quick-card" @click="store.activeTab = 'comandos'; store.loadComandos()">
-						<div class="qc-glow" style="--glow-color: var(--purple);"></div>
-						<div class="qc-icon purple-icon"><i class="fa-solid fa-terminal"></i></div>
+					<!-- COMANDOS -->
+					<div class="quick-card quick-card-cmd" @click="store.activeTab = 'comandos'; store.loadComandos()">
+						<div class="qc-artwork qc-art-city"></div>
+						<div class="qc-icon gold-icon terminal-prompt">&gt;_</div>
 						<div class="qc-title">COMANDOS</div>
 						<div class="qc-desc">Animações e atalhos</div>
 						<div class="qc-arrow"><i class="fa-solid fa-arrow-right"></i></div>
 					</div>
 
-					<div class="quick-card" @click="store.activeTab = 'mira'; store.loadMira()">
-						<div class="qc-glow" style="--glow-color: var(--green);"></div>
-						<div class="qc-icon green-icon"><i class="fa-solid fa-crosshairs"></i></div>
+					<!-- MIRA CUSTOM -->
+					<div class="quick-card quick-card-mira" @click="store.activeTab = 'mira'; store.loadMira()">
+						<div class="qc-artwork qc-art-reticle">
+							<img src="assets/card_reticle.png?v=5.0" alt="Mira" class="card-reticle-img">
+						</div>
+						<div class="qc-icon gold-icon"><i class="fa-solid fa-crosshairs"></i></div>
 						<div class="qc-title">MIRA CUSTOM</div>
 						<div class="qc-desc">Configure seu crosshair</div>
 						<div class="qc-arrow"><i class="fa-solid fa-arrow-right"></i></div>
 					</div>
 				</div>
 
+				<!-- LOJA DE GEMAS BANNER -->
+				<div class="gems-teaser" @click="openGemasStore()">
+					<div class="gems-teaser-art"></div>
+					<div class="gems-teaser-left">
+						<img src="assets/gem_diamond.png?v=5.1" alt="Gemas" class="gems-teaser-gem-img">
+						<div>
+							<div class="gems-teaser-title">LOJA DE GEMAS</div>
+							<div class="gems-teaser-sub">Renomeie · Placas Personalizadas · Vagas Veículo/Casa · Recriar Personagem</div>
+						</div>
+					</div>
+					<div class="gems-teaser-right">
+						<div class="gems-balance-pill">
+							<span class="gbp-label">SEU SALDO</span>
+							<span class="gbp-val"><i class="fa-solid fa-gem"></i> <span x-text="store.formatGems(store.player.gems) + ' GEMAS'"></span></span>
+						</div>
+						<div class="gems-teaser-btn" @click.stop="openGemasStore()">ABRIR LOJA <i class="fa-solid fa-arrow-up-right-from-square"></i></div>
+					</div>
+				</div>
+
 				<!-- VIP Teaser (no VIP) -->
 				<div class="vip-teaser" x-show="store.vip.tier === 'nenhum'" x-transition
 					@click="store.activeTab = 'vip'">
-					<div class="vip-teaser-particles">
-						<div class="pt pt1"></div>
-						<div class="pt pt2"></div>
-						<div class="pt pt3"></div>
-						<div class="pt pt4"></div>
-						<div class="pt pt5"></div>
-						<div class="pt pt6"></div>
-					</div>
+					<div class="vip-teaser-art"></div>
 					<div class="vip-teaser-left">
 						<div class="vip-teaser-crown"><i class="fa-solid fa-crown"></i></div>
 						<div>
@@ -330,11 +339,11 @@
 							<div class="vstat-val" x-text="store.vip.inventory + ' kg'"></div>
 						</div>
 					</div>
-					<div class="vstat">
-						<div class="vstat-icon si-blue"><i class="fa-solid fa-coins"></i></div>
+					<div class="vstat" @click="openGemasStore()" style="cursor: pointer;" title="Abrir Loja de Gemas">
+						<div class="vstat-icon si-gems"><i class="fa-solid fa-gem"></i></div>
 						<div>
-							<div class="vstat-label">Carteira de Coins</div>
-							<div class="vstat-val" x-text="store.vip.coins"></div>
+							<div class="vstat-label">Saldo de Gemas</div>
+							<div class="vstat-val" style="color: #00e5ff;" x-text="store.formatGems(store.player.gems) + ' Gemas'"></div>
 						</div>
 					</div>
 				</div>
@@ -1036,26 +1045,28 @@
 										</div>
 									</div>
 
-									<div class="selected-vehicle" x-show="planModal.vehicle">
-										<div class="reward-item-card">
-											<div class="reward-icon"><i class="fa-solid fa-car"></i></div>
-											<div class="reward-info">
-												<div class="ri-name" x-text="planModal.vehicle?.name || planModal.vehicle?.model"></div>
-												<div class="ri-qty">
-													<select x-model="planModal.vehicle.type" class="ri-qty-inp" style="width: auto; padding-right: 20px;">
-														<option value="perm">Permanente</option>
-														<option value="temp">Temporário</option>
-													</select>
+									<template x-if="planModal.vehicle">
+										<div class="selected-vehicle">
+											<div class="reward-item-card">
+												<div class="reward-icon"><i class="fa-solid fa-car"></i></div>
+												<div class="reward-info">
+													<div class="ri-name" x-text="planModal.vehicle?.name || planModal.vehicle?.model"></div>
+													<div class="ri-qty">
+														<select x-model="planModal.vehicle.type" class="ri-qty-inp" style="width: auto; padding-right: 20px;">
+															<option value="perm">Permanente</option>
+															<option value="temp">Temporário</option>
+														</select>
+													</div>
+												</div>
+												<div class="btn-del-reward" @click="planModal.vehicle = null">
+													<i class="fa-solid fa-trash-can"></i>
 												</div>
 											</div>
-											<div class="btn-del-reward" @click="planModal.vehicle = null">
-												<i class="fa-solid fa-trash-can"></i>
-											</div>
+											<span class="field-sub" x-show="planModal.vehicle?.type === 'temp'" style="color: var(--gold);">
+												O veículo será removido quando o VIP expirar ou for revogado.
+											</span>
 										</div>
-										<span class="field-sub" x-show="planModal.vehicle?.type === 'temp'" style="color: var(--gold);">
-											O veículo será removido quando o VIP expirar ou for revogado.
-										</span>
-									</div>
+									</template>
 									<div class="reward-empty" x-show="!planModal.vehicle">
 										Nenhum veículo configurado para este plano
 									</div>

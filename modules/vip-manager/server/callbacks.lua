@@ -7,8 +7,14 @@ lib.callback.register('mri_esc:server:getVipData', function(source)
     if not player then return nil end
 
     local vipTier = player.PlayerData.metadata['vip'] or 'nenhum'
-    local coins   = player.PlayerData.money.coin or 0
-    local cid     = player.PlayerData.citizenid
+    local gems = 0
+    if GetResourceState('dp_sistema_gemas') == 'started' then
+        gems = exports['dp_sistema_gemas']:GetGems(source) or 0
+    elseif player.PlayerData.money and player.PlayerData.money.coin then
+        gems = player.PlayerData.money.coin or 0
+    end
+    local coins = gems
+    local cid   = player.PlayerData.citizenid
 
     local vipConfigs = GetVipConfigs()
     local currentVipInfo = vipConfigs[vipTier] or vipConfigs['nenhum'] or { label = "Nenhum", payment = 0, inventory = 100 }
@@ -41,6 +47,7 @@ lib.callback.register('mri_esc:server:getVipData', function(source)
         salary        = currentVipInfo.payment  or 0,
         inventory     = currentVipInfo.inventory or 0,
         coins         = coins,
+        gems          = gems,
         benefits      = currentVipInfo.benefits or {},
         interval      = paycheckInterval,
         timeLeft      = GetSyncedTimeLeft(),

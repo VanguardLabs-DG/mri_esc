@@ -49,6 +49,7 @@ const App = {
                     job: Utils.sanitize(data.job),
                     money: data.money,
                     bank: data.bank,
+                    gems: data.gems !== undefined ? data.gems : (data.vip ? (data.vip.gems ?? data.vip.coins ?? 0) : 0),
                     playersOn: data.playersOn
                 };
                 if (data.vip) store.updateVip(data.vip);
@@ -88,6 +89,16 @@ const App = {
 
             case 'updateVipData':
                 if (data.vip) store.updateVip(data.vip);
+                if (data.gems !== undefined) store.player.gems = data.gems;
+                break;
+
+            case 'updateGems':
+                if (store.player) {
+                    store.player.gems = data.gems || 0;
+                }
+                if (store.vip) {
+                    store.vip.coins = data.gems || 0;
+                }
                 break;
 
             case 'updateCoins':

@@ -110,6 +110,13 @@ RegisterCommand("open_menu", function()
         end
     end
 
+    local gems = 0
+    if LocalPlayer and LocalPlayer.state and LocalPlayer.state.gems ~= nil then
+        gems = LocalPlayer.state.gems
+    elseif vipData and (vipData.gems ~= nil or vipData.coins ~= nil) then
+        gems = vipData.gems or vipData.coins or 0
+    end
+
     local isAdmin = vipData and vipData.isAdmin == true
     local coords = GetEntityCoords(PlayerPedId())
 
@@ -120,6 +127,7 @@ RegisterCommand("open_menu", function()
         id        = id,
         money     = money,
         bank      = bank,
+        gems      = gems,
         job       = jobText,
         vip       = vipData,
         isAdmin   = isAdmin,
@@ -142,9 +150,22 @@ RegisterKeyMapping("open_menu", "Abrir Esc Menu", "keyboard", "ESCAPE")
 RegisterNetEvent('mri_esc:client:refreshVip', function()
     if open then
         local vipData = lib.callback.await('mri_esc:server:getVipData', false)
+        local gems = (LocalPlayer and LocalPlayer.state and LocalPlayer.state.gems) or (vipData and (vipData.gems or vipData.coins)) or 0
         SendNUIMessage({
             action = "updateVipData",
-            vip = vipData
+            vip = vipData,
+            gems = gems
+        })
+    end
+end)
+
+-- Real-time Gems statebag synchronization
+AddStateBagChangeHandler('gems', nil, function(bagName, key, value)
+    local ply = GetPlayerFromStateBagName(bagName)
+    if ply == PlayerId() and open then
+        SendNUIMessage({
+            action = "updateGems",
+            gems = value or 0
         })
     end
 end)

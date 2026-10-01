@@ -56,3 +56,25 @@ RegisterNUICallback("salvarRedesSociais", function(data, cb)
     SetResourceKvp("mri_esc:redes", json.encode(redesSociais))
     if cb then cb({ success = true }) end
 end)
+
+RegisterNUICallback("openGemas", function(_, cb)
+    print("[vanguard_esc] NUI Callback 'openGemas' received")
+    if cb then cb({ success = true }) end
+    closeMenu()
+    CreateThread(function()
+        Wait(350)
+        ExecuteCommand("gemas")
+        TriggerEvent("Gems:Open")
+    end)
+end)
+
+RegisterNUICallback("gemas", function(_, cb)
+    print("[vanguard_esc] NUI Callback 'gemas' received")
+    if cb then cb({ success = true }) end
+    closeMenu()
+    CreateThread(function()
+        Wait(350)
+        ExecuteCommand("gemas")
+        TriggerEvent("Gems:Open")
+    end)
+end)

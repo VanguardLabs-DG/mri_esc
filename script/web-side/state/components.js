@@ -4,17 +4,23 @@
 
 function appRoot() {
     return {
-        get store() { return Alpine.store('ui'); }
+        get store() { return Alpine.store('ui'); },
+        openGemasStore() { Nui.post('openGemas'); }
     };
 }
 
 function menuComponent() {
     return {
+        openGemasStore() {
+            Nui.post('openGemas');
+        },
         handleTabClick(tab) {
             const store = Alpine.store('ui');
             const actions = {
-                'mapa': () => Nui.post('mapa'),
+                'mapa': () => { Nui.post('openNativeMap'); },
                 'config': () => Nui.post('config'),
+                'gemas': () => Nui.post('openGemas'),
+                'loja_gemas': () => Nui.post('openGemas'),
                 'customizacao': () => { store.activeTab = tab.id; store.loadRedesSociais(); },
                 'comandos': () => { store.activeTab = tab.id; store.loadComandos(); },
                 'mira': () => { store.activeTab = tab.id; store.loadMira(); },
