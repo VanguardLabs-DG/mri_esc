@@ -155,8 +155,8 @@ exports('TogglePluginForPlayer', function(source, pluginId, opts)
     return true
 end)
 
--- NetEvent alternative for resources preferring events
-RegisterNetEvent('vanguard_esc:server:registerPlugin', function(manifest)
+-- Server-internal event for resources preferring events over exports (not network-callable by clients)
+AddEventHandler('vanguard_esc:server:registerPlugin', function(manifest)
     RegisterPlugin(manifest)
 end)
 

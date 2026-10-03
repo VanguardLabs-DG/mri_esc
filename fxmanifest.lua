@@ -5,7 +5,8 @@ dependencies {
     'oxmysql',
     'ox_lib',
     'qbx_core',
-    'vanguard_lib'
+    'vanguard_lib',
+    'vanguard_vip'
 }
 
 shared_scripts {
@@ -15,7 +16,6 @@ shared_scripts {
 }
 
 client_scripts {
-    'modules/vip-manager/client/*.lua',
     'script/client-side/modules/*.lua',
     'script/client-side/*.lua'
 }
@@ -23,11 +23,7 @@ client_scripts {
 server_scripts {
     '@oxmysql/lib/MySQL.lua',
     'script/server-side/utils/*.lua',
-    'modules/vip-manager/server/database.lua',
-    'modules/vip-manager/server/controller.lua',
-    'modules/vip-manager/server/callbacks.lua',
     'script/server-side/core/*.lua',
-    'script/server-side/controllers/*.lua',
     'script/server-side/*.lua'
 }
 
