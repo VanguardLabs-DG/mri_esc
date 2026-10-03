@@ -2,8 +2,6 @@
    MRI ESC MENU — Triple-A Premium Design v3.0
    ================================================ */
 
-@import url('https://fonts.googleapis.com/css2?family=Sora:wght@100..800&family=Urbanist:ital,wght@0,100..900;1,100..900&display=swap');
-
 /* ---- Design Tokens ---- */
 :root {
   /* Base Darks */
@@ -20,22 +18,24 @@
   --gold-glow: rgba(229, 169, 60, 0.25);
   --gold-glow-s: rgba(229, 169, 60, 0.5);
 
-  /* Primary Theme Color */
-  --blue: #e5a93c;
-  --blue-l: #f5b945;
-  --blue-glow: rgba(229, 169, 60, 0.25);
-  --blue-glow-s: rgba(229, 169, 60, 0.5);
+  /* Primary Theme Color — Cyan / Tech */
+  --cyan: #00e5ff;
+  --blue: #00e5ff;
+  --blue-l: #38bdf8;
+  --blue-glow: rgba(0, 229, 255, 0.25);
+  --blue-glow-s: rgba(0, 229, 255, 0.5);
 
   /* Accents */
   --green: #10b981;
-  --green-glow: rgba(16, 185, 129, 0.2);
-  --purple: #e5a93c;
+  --green-glow: rgba(16, 185, 129, 0.25);
+  --purple: #a855f7;
+  --purple-glow: rgba(168, 85, 247, 0.25);
   --red: #ef4444;
 
-  /* Glass */
-  --glass: rgba(10, 10, 14, 0.85);
-  --glass-b: rgba(229, 169, 60, 0.25);
-  --glass-h: rgba(229, 169, 60, 0.08);
+  /* Glass - High Contrast Luxury Dark */
+  --glass: rgba(10, 10, 16, 0.85);
+  --glass-b: rgba(255, 255, 255, 0.08);
+  --glass-h: rgba(255, 255, 255, 0.04);
 
   /* Text */
   --t1: #FFFFFF;
@@ -244,6 +244,25 @@ body {
 .profile-job i {
   color: #e5a93c;
   font-size: 10px;
+}
+
+.profile-location {
+  font-size: 11px;
+  color: #8a8f9d;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 3px;
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.profile-location i {
+  color: var(--cyan);
+  font-size: 10px;
+  flex-shrink: 0;
 }
 
 /* Finances */
@@ -707,8 +726,8 @@ body {
 }
 
 .quick-card {
-  background: rgba(10, 10, 14, 0.55);
-  border: 1px solid rgba(229, 169, 60, 0.45);
+  background: rgba(10, 10, 14, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 10px;
   padding: 12px 18px;
   cursor: pointer;
@@ -718,15 +737,55 @@ body {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  transition: all 0.2s ease;
+  transition: all 0.25s ease;
   box-shadow: 0 0 10px rgba(0, 0, 0, 0.4);
 }
 
 .quick-card:hover {
   transform: translateY(-2px);
-  border-color: #e5a93c;
-  box-shadow: 0 6px 25px rgba(0, 0, 0, 0.5), 0 0 15px rgba(229, 169, 60, 0.2);
+  box-shadow: 0 6px 25px rgba(0, 0, 0, 0.5);
 }
+
+/* Specific Card Colorways — Breaking Homogenization */
+.quick-card-map {
+  border-color: rgba(0, 229, 255, 0.28);
+}
+.quick-card-map:hover {
+  border-color: #00e5ff;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.5), 0 0 20px rgba(0, 229, 255, 0.25);
+}
+.quick-card-map .qc-arrow { color: #00e5ff; }
+
+.quick-card-cmd {
+  border-color: rgba(168, 85, 247, 0.28);
+}
+.quick-card-cmd:hover {
+  border-color: #a855f7;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.5), 0 0 20px rgba(168, 85, 247, 0.25);
+}
+.quick-card-cmd .qc-arrow { color: #a855f7; }
+
+.quick-card-mira {
+  border-color: rgba(16, 185, 129, 0.28);
+}
+.quick-card-mira:hover {
+  border-color: #10b981;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.5), 0 0 20px rgba(16, 185, 129, 0.25);
+}
+.quick-card-mira .qc-arrow { color: #10b981; }
+
+/* The Standout VIP Crown Jewel (Isolation Effect) */
+.quick-card-vip {
+  background: linear-gradient(135deg, rgba(245, 185, 69, 0.14) 0%, rgba(10, 10, 14, 0.8) 100%);
+  border: 1px solid rgba(245, 185, 69, 0.65);
+  box-shadow: 0 0 15px rgba(245, 185, 69, 0.18);
+}
+.quick-card-vip:hover {
+  transform: translateY(-3px);
+  border-color: #ffd700;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6), 0 0 25px rgba(245, 185, 69, 0.45);
+}
+.quick-card-vip .qc-arrow { color: #f5b945; }
 
 .qc-content {
   position: relative;
@@ -740,8 +799,24 @@ body {
   margin-bottom: 6px;
 }
 
+.blue-icon {
+  color: #00e5ff;
+  filter: drop-shadow(0 0 8px rgba(0, 229, 255, 0.5));
+}
+
+.purple-icon {
+  color: #a855f7;
+  filter: drop-shadow(0 0 8px rgba(168, 85, 247, 0.5));
+}
+
+.green-icon {
+  color: #10b981;
+  filter: drop-shadow(0 0 8px rgba(16, 185, 129, 0.5));
+}
+
 .gold-icon {
-  color: #e5a93c;
+  color: #f5b945;
+  filter: drop-shadow(0 0 10px rgba(245, 185, 69, 0.65));
 }
 
 .terminal-prompt {
@@ -768,7 +843,6 @@ body {
   position: absolute;
   bottom: 12px;
   right: 14px;
-  color: #e5a93c;
   font-size: 12px;
   transition: transform 0.2s;
   z-index: 2;
@@ -790,6 +864,13 @@ body {
   padding: 2px 6px;
   border-radius: 3px;
   z-index: 3;
+}
+
+.qc-badge-vip {
+  background: linear-gradient(135deg, #ffd700, #f59e0b);
+  color: #000;
+  font-weight: 900;
+  box-shadow: 0 0 10px rgba(245, 185, 69, 0.5);
 }
 
 /* Card Artworks */
@@ -836,7 +917,7 @@ body {
   max-width: 100%;
   max-height: 100%;
   object-fit: contain;
-  filter: drop-shadow(0 0 8px rgba(229, 169, 60, 0.5));
+  filter: drop-shadow(0 0 8px rgba(16, 185, 129, 0.5));
 }
 
 /* Map Card Specifics */
@@ -1022,6 +1103,7 @@ body {
   background: #ffc233 !important;
   transform: scale(1.02);
 }
+
 
 /* VIP Active Bar */
 .vip-active-bar {
@@ -1646,6 +1728,243 @@ body {
   line-height: 1.5;
 }
 
+
+
+/* ================================================
+   VIP ACQUISITION MODAL (INTERACTIVE FLOW)
+   ================================================ */
+.vip-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(4, 4, 8, 0.88);
+  /* backdrop-filter: blur(8px); -- REMOVIDO PARA PERFORMANCE */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.vip-modal-card {
+  width: 520px;
+  max-width: 90vw;
+  background: rgba(14, 14, 20, 0.96);
+  border: 1px solid rgba(245, 185, 69, 0.55);
+  box-shadow: 0 12px 45px rgba(0, 0, 0, 0.8), 0 0 35px rgba(245, 185, 69, 0.2);
+  border-radius: 14px;
+  padding: 24px;
+  position: relative;
+  overflow: hidden;
+}
+
+.vm-close {
+  position: absolute;
+  top: 16px;
+  right: 18px;
+  font-size: 16px;
+  color: #8b8b98;
+  cursor: pointer;
+  transition: color 0.2s;
+  padding: 4px;
+  z-index: 10;
+}
+
+.vm-close:hover {
+  color: #ffffff;
+}
+
+.vm-header {
+  text-align: center;
+  margin-bottom: 18px;
+}
+
+.vm-crown {
+  font-size: 32px;
+  color: #ffd700;
+  filter: drop-shadow(0 0 12px rgba(245, 185, 69, 0.65));
+  margin-bottom: 6px;
+}
+
+.vm-title {
+  font-size: 16px;
+  font-weight: 900;
+  letter-spacing: 1.5px;
+  color: #ffffff;
+}
+
+.vm-sub {
+  font-size: 10px;
+  color: #a1a1aa;
+  margin-top: 3px;
+}
+
+.vm-plan-summary {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-bottom: 16px;
+}
+
+.vm-sum-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.vms-label {
+  font-size: 8px;
+  color: #8b8b98;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.vms-val {
+  font-size: 11px;
+  font-weight: 900;
+  color: #ffd700;
+}
+
+.vm-alert {
+  padding: 9px 14px;
+  border-radius: 8px;
+  font-size: 10.5px;
+  font-weight: 700;
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.vm-alert-success {
+  background: rgba(16, 185, 129, 0.15);
+  border: 1px solid #10b981;
+  color: #10b981;
+}
+
+.vm-alert-error {
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid #ef4444;
+  color: #ef4444;
+}
+
+.vm-options {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.vm-option-card {
+  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.vm-option-card:hover {
+  background: rgba(255, 255, 255, 0.07);
+  border-color: rgba(255, 255, 255, 0.2);
+  transform: translateY(-2px);
+}
+
+.vm-option-card.disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.vmo-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.vmo-gem {
+  background: rgba(0, 229, 255, 0.12);
+  border: 1px solid rgba(0, 229, 255, 0.4);
+  color: #00e5ff;
+}
+
+.vmo-store {
+  background: rgba(245, 185, 69, 0.12);
+  border: 1px solid rgba(245, 185, 69, 0.4);
+  color: #ffd700;
+}
+
+.vmo-discord {
+  background: rgba(88, 101, 242, 0.15);
+  border: 1px solid rgba(88, 101, 242, 0.4);
+  color: #5865f2;
+}
+
+.vmo-body {
+  flex: 1;
+}
+
+.vmo-title {
+  font-size: 11.5px;
+  font-weight: 900;
+  letter-spacing: 0.6px;
+  color: #ffffff;
+}
+
+.vmo-desc {
+  font-size: 9.5px;
+  color: #a1a1aa;
+  margin-top: 2px;
+}
+
+.vmo-btn {
+  padding: 8px 14px;
+  border-radius: 6px;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.6px;
+  cursor: pointer;
+  border: none;
+  white-space: nowrap;
+  transition: all 0.2s;
+}
+
+.vmo-btn-gems {
+  background: linear-gradient(135deg, #00e5ff, #0284c7);
+  color: #000;
+}
+.vmo-btn-gems:hover {
+  background: #38bdf8;
+  box-shadow: 0 0 12px rgba(0, 229, 255, 0.4);
+}
+
+.vmo-btn-cyan {
+  background: rgba(0, 229, 255, 0.15);
+  border: 1px solid #00e5ff;
+  color: #00e5ff;
+}
+.vmo-btn-cyan:hover {
+  background: #00e5ff;
+  color: #000;
+}
+
+.vmo-btn-discord {
+  background: #5865f2;
+  color: #fff;
+}
+.vmo-btn-discord:hover {
+  background: #6d78f5;
+  box-shadow: 0 0 12px rgba(88, 101, 242, 0.4);
+}
+
 /* ================================================
    VIP METRICS DASHBOARD
    ================================================ */
@@ -1671,9 +1990,9 @@ body {
   display: flex;
   align-items: center;
   gap: 14px;
-  background: linear-gradient(rgba(5, 5, 10, 0.5), rgba(5, 5, 10, 0.5)) padding-box,
+  background: linear-gradient(rgba(5, 5, 10, 0.8), rgba(5, 5, 10, 0.8)) padding-box,
     linear-gradient(135deg, rgba(255, 255, 255, 0.1), transparent) border-box;
-  backdrop-filter: blur(8px);
+  /* backdrop-filter: blur(8px); -- REMOVIDO PARA PERFORMANCE */
   border: 1px solid transparent;
   border-radius: 14px;
   padding: 18px 20px;
@@ -2693,8 +3012,8 @@ body {
   position: fixed;
   inset: 0;
   z-index: 100;
-  background: rgba(0, 0, 0, 0.7);
-  backdrop-filter: blur(4px);
+  background: rgba(0, 0, 0, 0.85);
+  /* backdrop-filter: blur(4px); -- REMOVIDO PARA PERFORMANCE */
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2943,7 +3262,7 @@ body {
   font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.3px;
-  backdrop-filter: blur(6px);
+  /* backdrop-filter: blur(6px); -- REMOVIDO PARA PERFORMANCE */
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35);
 }
 
@@ -3008,8 +3327,8 @@ body {
 }
 
 .plan-card {
-  background: rgba(5, 5, 15, 0.55);
-  backdrop-filter: blur(10px);
+  background: rgba(10, 10, 16, 0.88);
+  /* backdrop-filter: blur(10px); -- REMOVIDO PARA PERFORMANCE */
   border: 1px solid var(--glass-b);
   border-radius: 14px;
   padding: 20px;
@@ -3428,4 +3747,76 @@ body {
     color: var(--blue-l);
     border-radius: 8px;
     font-size: 18px;
+}
+
+/* =========================================================================
+   PLUGIN HOST & EMBEDDED IFRAMES
+   ========================================================================= */
+
+.nav-gems-item.nav-active {
+  border-color: #ffd566 !important;
+  box-shadow: 0 0 20px rgba(229, 169, 60, 0.6), inset 0 0 16px rgba(229, 169, 60, 0.25) !important;
+  background: radial-gradient(ellipse at 50% 50%, rgba(229, 169, 60, 0.32) 0%, rgba(24, 20, 30, 0.98) 100%), #141218 !important;
+}
+
+.nav-plugin-pill {
+  margin-left: auto;
+  background: rgba(0, 229, 255, 0.15);
+  color: #00e5ff;
+  border: 1px solid rgba(0, 229, 255, 0.35);
+  font-family: 'Urbanist', 'Sora', sans-serif;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.6px;
+  padding: 2px 7px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+}
+
+.nav-plugin-item:hover .nav-plugin-pill {
+  background: rgba(0, 229, 255, 0.25);
+  box-shadow: 0 0 8px rgba(0, 229, 255, 0.4);
+}
+
+.plugin-panel-container {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  background: transparent;
+}
+
+.plugin-iframe {
+  width: 100%;
+  height: 100%;
+  flex: 1;
+  border: none;
+  background: transparent;
+  display: block;
+}
+
+.plugin-loading-spinner {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  color: #00e5ff;
+  font-family: 'Sora', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  background: rgba(11, 14, 20, 0.95);
+  z-index: 5;
+  /* backdrop-filter: blur(8px); -- REMOVIDO PARA PERFORMANCE */
+}
+
+.plugin-loading-spinner i {
+  font-size: 28px;
+  filter: drop-shadow(0 0 8px rgba(0, 229, 255, 0.8));
 }

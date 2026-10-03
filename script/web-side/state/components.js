@@ -4,23 +4,48 @@
 
 function appRoot() {
     return {
-        get store() { return Alpine.store('ui'); },
-        openGemasStore() { Nui.post('openGemas'); }
+        get store() {
+            try {
+                return Alpine.store('ui') || {};
+            } catch (e) {
+                return {};
+            }
+        },
+        openGemasStore() {
+            const store = Alpine.store('ui');
+            if (store && store.openGemasStore) {
+                store.openGemasStore();
+            } else {
+                Nui.post('openGemas');
+            }
+        }
     };
 }
 
 function menuComponent() {
     return {
+        get store() {
+            try {
+                return Alpine.store('ui') || {};
+            } catch (e) {
+                return {};
+            }
+        },
         openGemasStore() {
-            Nui.post('openGemas');
+            const store = Alpine.store('ui');
+            if (store && store.openGemasStore) {
+                store.openGemasStore();
+            } else {
+                Nui.post('openGemas');
+            }
         },
         handleTabClick(tab) {
             const store = Alpine.store('ui');
             const actions = {
                 'mapa': () => { Nui.post('openNativeMap'); },
                 'config': () => Nui.post('config'),
-                'gemas': () => Nui.post('openGemas'),
-                'loja_gemas': () => Nui.post('openGemas'),
+                'gemas': () => store.openGemasStore(),
+                'loja_gemas': () => store.openGemasStore(),
                 'customizacao': () => { store.activeTab = tab.id; store.loadRedesSociais(); },
                 'comandos': () => { store.activeTab = tab.id; store.loadComandos(); },
                 'mira': () => { store.activeTab = tab.id; store.loadMira(); },
@@ -33,6 +58,13 @@ function menuComponent() {
 
 function miraComponent() {
     return {
+        get store() {
+            try {
+                return Alpine.store('ui') || {};
+            } catch (e) {
+                return {};
+            }
+        },
         update() {
             const config = Alpine.store('ui').mira;
             window.miraPreview?.draw(config);
@@ -56,6 +88,13 @@ function miraComponent() {
 
 function adminVipPanel() {
     return {
+        get store() {
+            try {
+                return Alpine.store('ui') || {};
+            } catch (e) {
+                return {};
+            }
+        },
         search: '',
         searchResults: [],
         searching: false,
@@ -333,3 +372,32 @@ window.appRoot = appRoot;
 window.menuComponent = menuComponent;
 window.miraComponent = miraComponent;
 window.adminVipPanel = adminVipPanel;
+
+// Register Alpine components upon alpine:init
+document.addEventListener('alpine:init', () => {
+    if (typeof Alpine !== 'undefined' && Alpine.data) {
+        Alpine.data('appRoot', appRoot);
+        Alpine.data('menuComponent', menuComponent);
+        Alpine.data('miraComponent', miraComponent);
+        Alpine.data('adminVipPanel', adminVipPanel);
+    }
+});
+
+// Global fallback for any un-scoped expression referencing 'store'
+if (!window.store) {
+    try {
+        Object.defineProperty(window, 'store', {
+            get() {
+                try {
+                    return (typeof Alpine !== 'undefined' && Alpine.store) ? Alpine.store('ui') || {} : {};
+                } catch (e) {
+                    return {};
+                }
+            },
+            configurable: true
+        });
+    } catch (e) {
+        window.store = {};
+    }
+}
+

@@ -89,6 +89,94 @@ lib.callback.register('mri_esc:vip:admin:list', function(source)
 end)
 
 -- ─────────────────────────────────────────────────────────────
+--  ADMIN: AUDITORIA VIP (Discord & Structured Server Log)
+-- ─────────────────────────────────────────────────────────────
+local function AuditLogVipAction(action, executorSource, targetCitizenId, details)
+    local timestamp = os.time()
+    local executorName = "Console/Admin"
+    local executorId = tostring(executorSource or "0")
+
+    if executorSource and tonumber(executorSource) and tonumber(executorSource) > 0 then
+        if vanguard and vanguard.player and vanguard.player.getName then
+            local vName = vanguard.player.getName(executorSource)
+            if vName and vName ~= "" and vName ~= "Unknown Player" then
+                executorName = vName
+            end
+        end
+        if executorName == "Console/Admin" then
+            local ap = exports.qbx_core:GetPlayer(executorSource)
+            if ap and ap.PlayerData and ap.PlayerData.charinfo then
+                executorName = string.format("%s %s", ap.PlayerData.charinfo.firstname or "", ap.PlayerData.charinfo.lastname or "")
+            else
+                executorName = GetPlayerName(executorSource) or "Admin"
+            end
+        end
+
+        if vanguard and vanguard.player and vanguard.player.getCitizenId then
+            local vCid = vanguard.player.getCitizenId(executorSource)
+            if vCid and vCid ~= "" then
+                executorId = vCid
+            end
+        end
+        if executorId == tostring(executorSource) then
+            local ap = exports.qbx_core:GetPlayer(executorSource)
+            if ap and ap.PlayerData and ap.PlayerData.citizenid then
+                executorId = ap.PlayerData.citizenid
+            end
+        end
+    end
+
+    local logEntry = {
+        executorName = executorName,
+        executorId   = executorId,
+        target       = targetCitizenId,
+        ["ação"]     = action,
+        acao         = action,
+        action       = action,
+        timestamp    = timestamp,
+        details      = details or {}
+    }
+
+    -- 1. Log Estruturado de Servidor
+    print(string.format(
+        "^5[Vanguard VIP Audit]^0 [^3%s^0] Executor: ^2%s^0 (ID: ^3%s^0) | Alvo: ^3%s^0 | Ação: ^2%s^0 | Timestamp: ^3%d^0 | Detalhes: %s",
+        os.date("!%Y-%m-%d %H:%M:%SZ", timestamp),
+        executorName,
+        executorId,
+        tostring(targetCitizenId),
+        action,
+        timestamp,
+        json.encode(details or {})
+    ))
+
+    -- 2. Auditoria via Discord API (vanguard.discord.request)
+    if vanguard and vanguard.discord and vanguard.discord.request then
+        pcall(function()
+            local discordChannel = GetConvar("vanguard_vip_audit_channel", "")
+            if discordChannel ~= "" then
+                local embedColor = (action == "REVOKE" and 15158332 or (action == "GRANT" and 3066993 or 3447003))
+                vanguard.discord.request("POST", "channels/" .. discordChannel .. "/messages", {
+                    embeds = {{
+                        title = "🛡️ [Vanguard VIP Audit] " .. action,
+                        color = embedColor,
+                        fields = {
+                            { name = "Executor", value = string.format("%s (`%s`)", executorName, executorId), inline = true },
+                            { name = "Alvo (CitizenID)", value = string.format("`%s`", tostring(targetCitizenId)), inline = true },
+                            { name = "Ação", value = action, inline = true },
+                            { name = "Timestamp", value = string.format("<t:%d:F> (`%d`)", timestamp, timestamp), inline = true },
+                            { name = "Detalhes", value = string.format("```json\n%s\n```", json.encode(details or {})), inline = false }
+                        },
+                        timestamp = os.date("!%Y-%m-%dT%H:%M:%SZ", timestamp)
+                    }}
+                })
+            end
+        end)
+    end
+
+    return logEntry
+end
+
+-- ─────────────────────────────────────────────────────────────
 --  ADMIN: CONCEDER VIP
 -- ─────────────────────────────────────────────────────────────
 lib.callback.register('mri_esc:vip:admin:grant', function(source, data)
@@ -106,6 +194,13 @@ lib.callback.register('mri_esc:vip:admin:grant', function(source, data)
     local cid = data.citizenId:upper()
     local adminName = "Admin"
     pcall(function()
+        if vanguard and vanguard.player and vanguard.player.getName then
+            local vName = vanguard.player.getName(source)
+            if vName and vName ~= "" and vName ~= "Unknown Player" then
+                adminName = vName
+                return
+            end
+        end
         local ap = exports.qbx_core:GetPlayer(source)
         if ap then
             adminName = ap.PlayerData.charinfo.firstname .. " " .. ap.PlayerData.charinfo.lastname
@@ -145,6 +240,10 @@ lib.callback.register('mri_esc:vip:admin:grant', function(source, data)
         result = err
     end
 
+    if success then
+        AuditLogVipAction("GRANT", source, cid, { tier = data.tier, durationDays = data.durationDays })
+    end
+
     return success and { success = true } or { success = false, error = tostring(result) }
 end)
 
@@ -156,7 +255,7 @@ lib.callback.register('mri_esc:vip:admin:revoke', function(source, data)
     if not data or not data.citizenId then return { success = false, error = "citizenId obrigatório" } end
 
     local cid = data.citizenId:upper()
-    pcall(function()
+    local ok, err = pcall(function()
         if RevokeVip then
             RevokeVip(cid, 'admin')
         else
@@ -176,7 +275,12 @@ lib.callback.register('mri_esc:vip:admin:revoke', function(source, data)
         end
     end)
 
-    return { success = true }
+    if ok then
+        AuditLogVipAction("REVOKE", source, cid, { reason = "admin" })
+        return { success = true }
+    end
+
+    return { success = false, error = tostring(err) }
 end)
 
 -- ─────────────────────────────────────────────────────────────
@@ -189,6 +293,13 @@ lib.callback.register('mri_esc:vip:admin:extend', function(source, data)
     local cid = data.citizenId:upper()
     local adminName = "Admin"
     pcall(function()
+        if vanguard and vanguard.player and vanguard.player.getName then
+            local vName = vanguard.player.getName(source)
+            if vName and vName ~= "" and vName ~= "Unknown Player" then
+                adminName = vName
+                return
+            end
+        end
         local ap = exports.qbx_core:GetPlayer(source)
         if ap then adminName = ap.PlayerData.charinfo.firstname .. " " .. ap.PlayerData.charinfo.lastname end
     end)
@@ -210,6 +321,10 @@ lib.callback.register('mri_esc:vip:admin:extend', function(source, data)
                 { cid, data.tier or 'tier1', newExp, adminName, now }
             )
         end)
+    end
+
+    if ok then
+        AuditLogVipAction("EXTEND", source, cid, { tier = data.tier, days = data.days })
     end
 
     return ok and { success = true } or { success = false, error = "Falha ao renovar" }

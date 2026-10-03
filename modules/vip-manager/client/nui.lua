@@ -127,6 +127,17 @@ RegisterNUICallback("vipAdminGetVehicles", function(_, cb)
     cb(vehicles or {})
 end)
 
+RegisterNUICallback("buyVipWithGems", function(data, cb)
+    CreateThread(function()
+        local ok, result = pcall(function()
+            return lib.callback.await('mri_esc:vip:buyWithGems', false, {
+                tier = data and data.tier
+            })
+        end)
+        cb((ok and result) or { success = false, error = "Erro ao comunicar com o servidor." })
+    end)
+end)
+
 AddEventHandler('mri_esc:client:adminReady', function()
     PushAdminList()
 end)

@@ -73,24 +73,30 @@ function closeMenu(ignoreFrontend)
     end)
 end
 
-RegisterCommand("open_menu", function()
-    print("[vanguard_esc] Command open_menu triggered. Current state 'open':", open)
-    
+function OpenMenu(targetTab)
+    print("[vanguard_esc] OpenMenu called. Current state 'open':", open, "targetTab:", targetTab)
+
     if not LocalPlayer.state.isLoggedIn or LocalPlayer.state.inArena or LocalPlayer.state.isDead or LocalPlayer.state.invOpen then
         print("[vanguard_esc] Menu open blocked by player state")
         return
     end
 
-    if open then 
-        closeMenu()
-        return 
+    if open then
+        if targetTab then
+            SendNUIMessage({
+                action = "navigate",
+                data = { route = targetTab }
+            })
+        else
+            closeMenu()
+        end
+        return
     end
-    -- ...
 
     local playersOn = GetPlayersOnline()
     local playerData = GetPlayerData()
     local vipData = lib.callback.await('mri_esc:server:getVipData', false)
-    
+
     local nome = "Jogador"
     local id = GetPlayerServerId(PlayerId())
     local money, bank = 0, 0
@@ -120,20 +126,59 @@ RegisterCommand("open_menu", function()
     local isAdmin = vipData and vipData.isAdmin == true
     local coords = GetEntityCoords(PlayerPedId())
 
+    -- Localização formatada (rua e bairro) via vanguard.geo.getStreetZone com fallback
+    local location = "Distrito Paulista"
+    local zone = nil
+    if vanguard and vanguard.geo and vanguard.geo.getStreetZone then
+        local ok, res = pcall(vanguard.geo.getStreetZone, coords)
+        if ok and res and res ~= "" and res ~= "NULL" then
+            zone = res
+        end
+    elseif GetResourceState('vanguard_lib') == 'started' then
+        local ok, res = pcall(function()
+            return exports['vanguard_lib']:FindLastLocation(coords)
+        end)
+        if ok and res and res ~= "" and res ~= "NULL" then
+            zone = res
+        end
+    end
+
+    if zone then
+        local streetHash = GetStreetNameAtCoord(coords.x, coords.y, coords.z)
+        local streetName = streetHash and GetStreetNameFromHashKey(streetHash)
+        if streetName and streetName ~= "" and not string.find(zone, streetName, 1, true) then
+            location = string.format("%s, %s", streetName, zone)
+        else
+            location = zone
+        end
+    end
+
+    -- Sincronizar mira persistida no Qbox se disponível
+    if playerData and playerData.metadata and (playerData.metadata.mira or playerData.metadata.crosshair) then
+        if CheckQboxMiraPersistence then
+            CheckQboxMiraPersistence(playerData)
+        elseif SyncMiraFromData then
+            SyncMiraFromData(playerData.metadata.mira or playerData.metadata.crosshair)
+        end
+    end
+
     SendNUIMessage({
-        action    = "showMenu",
-        playersOn = playersOn,
-        nome      = nome,
-        id        = id,
-        money     = money,
-        bank      = bank,
-        gems      = gems,
-        job       = jobText,
-        vip       = vipData,
-        isAdmin   = isAdmin,
-        playerX   = coords.x,
-        playerY   = coords.y,
-        tabs      = GetCachedTabs()
+        action     = "showMenu",
+        playersOn  = playersOn,
+        nome       = nome,
+        id         = id,
+        avatar     = vipData and vipData.avatar,
+        location   = location,
+        money      = money,
+        bank       = bank,
+        gems       = gems,
+        job        = jobText,
+        vip        = vipData,
+        isAdmin    = isAdmin,
+        playerX    = coords.x,
+        playerY    = coords.y,
+        tabs       = GetCachedTabs(),
+        initialTab = targetTab or "inicio"
     })
 
     if isAdmin then TriggerEvent('mri_esc:client:adminReady') end
@@ -143,6 +188,31 @@ RegisterCommand("open_menu", function()
     StartScreenEffect("MenuMGSelectionIn", 0, true)
     TriggerEvent("hud:Active", false)
     open = true
+end
+
+-- ── NUI CALLBACKS ───────────────────────────────────────────
+
+local function handleSaveMira(data, cb)
+    if data then
+        if SyncMiraFromData then
+            SyncMiraFromData(data)
+        elseif exports[GetCurrentResourceName()] and exports[GetCurrentResourceName()].SetMiraConfig then
+            exports[GetCurrentResourceName()]:SetMiraConfig(data)
+        else
+            miraConfig = data
+            SetResourceKvp("mri_esc:mira", json.encode(data))
+            SendNUIMessage({ action = "miraData", mira = data })
+        end
+        TriggerServerEvent('mri_esc:server:saveMira', data)
+    end
+    if cb then cb({ success = true }) end
+end
+
+RegisterNUICallback('saveMira', handleSaveMira)
+RegisterNUICallback('salvarMira', handleSaveMira)
+
+RegisterCommand("open_menu", function()
+    OpenMenu()
 end)
 
 RegisterKeyMapping("open_menu", "Abrir Esc Menu", "keyboard", "ESCAPE")

@@ -7,10 +7,16 @@
 --- @return boolean
 function IsAdminPlayer(source)
     local srcNum = tonumber(source)
-    if not srcNum then return false end
+    if not srcNum or srcNum <= 0 then return false end
     local srcStr = tostring(srcNum)
     
-    -- 1. Check ACE Permissions
+    -- 1. Check via vanguard_lib standard (QBX Core group/perm + ACE unified)
+    if vanguard and vanguard.player and vanguard.player.isAdmin then
+        local ok, isAdmin = pcall(function() return vanguard.player.isAdmin(srcNum) end)
+        if ok and isAdmin then return true end
+    end
+
+    -- 2. Fallback: Direct ACE Permissions
     if IsPlayerAceAllowed(srcStr, "admin")
     or IsPlayerAceAllowed(srcStr, "command")
     or IsPlayerAceAllowed(srcStr, "group.admin")

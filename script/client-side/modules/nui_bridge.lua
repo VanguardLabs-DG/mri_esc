@@ -40,12 +40,8 @@ RegisterNUICallback("consultMira", function(_, cb)
     if cb then cb({ tabela = miraConfig }) end
 end)
 
-RegisterNUICallback("salvarMira", function(data, cb)
-    miraConfig = data
-    SetResourceKvp("mri_esc:mira", json.encode(data))
-    SendNUIMessage({ action = "miraData", mira = data })
-    if cb then cb({ success = true }) end
-end)
+-- Note: 'salvarMira' and 'saveMira' are registered in client.lua with Qbox/server metadata persistence.
+
 
 RegisterNUICallback("consultRedesSociais", function(_, cb)
     if cb then cb({ success = true, instagram = redesSociais.instagram, tiktok = redesSociais.tiktok, youtube = redesSociais.youtube }) end
@@ -58,23 +54,17 @@ RegisterNUICallback("salvarRedesSociais", function(data, cb)
 end)
 
 RegisterNUICallback("openGemas", function(_, cb)
-    print("[vanguard_esc] NUI Callback 'openGemas' received")
+    print("[vanguard_esc] NUI Callback 'openGemas' received -> opening gem_store plugin")
+    if exports['vanguard_esc'] and exports['vanguard_esc'].OpenPlugin then
+        exports['vanguard_esc']:OpenPlugin('gem_store')
+    end
     if cb then cb({ success = true }) end
-    closeMenu()
-    CreateThread(function()
-        Wait(350)
-        ExecuteCommand("gemas")
-        TriggerEvent("Gems:Open")
-    end)
 end)
 
 RegisterNUICallback("gemas", function(_, cb)
-    print("[vanguard_esc] NUI Callback 'gemas' received")
+    print("[vanguard_esc] NUI Callback 'gemas' received -> opening gem_store plugin")
+    if exports['vanguard_esc'] and exports['vanguard_esc'].OpenPlugin then
+        exports['vanguard_esc']:OpenPlugin('gem_store')
+    end
     if cb then cb({ success = true }) end
-    closeMenu()
-    CreateThread(function()
-        Wait(350)
-        ExecuteCommand("gemas")
-        TriggerEvent("Gems:Open")
-    end)
 end)

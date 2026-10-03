@@ -1,5 +1,5 @@
 /**
- * app.js - Main Controller for MRI_ESC Web
+ * app.js - Main Controller for MRI_ESC Web with Extensible Plugin Engine
  */
 
 "use strict";
@@ -7,17 +7,17 @@
 const App = {
     init() {
         this.setupEventListeners();
-        this.initMap();
+        this.preloadPlugins();
     },
 
-    initMap() {
-        const mapElement = document.getElementById('meu-mapa');
-        if (mapElement) {
-            mapElement.addEventListener('map-ready', (e) => {
-                window.leafletEngine = e.detail.map;
-                const controls = mapElement.shadowRoot.querySelector('.leaflet-control-container');
-                if (controls) controls.style.display = 'none';
-            });
+    preloadPlugins() {
+        if (typeof Nui !== 'undefined' && Nui.post) {
+            Nui.post('getPlugins').then(plugins => {
+                const store = Alpine?.store('ui');
+                if (store && plugins) {
+                    store.setPlugins(plugins);
+                }
+            }).catch(() => {});
         }
     },
 
@@ -36,7 +36,42 @@ const App = {
         });
     },
 
+    handlePluginMessage(data) {
+        const store = Alpine?.store('ui');
+        if (!store) return;
+
+        const type = data.type || data.action;
+
+        if (type === 'mri-plugin/ready' || type === 'esc-plugin/ready') {
+            const pluginId = data.pluginId;
+            if (pluginId) {
+                store.onPluginLoaded(pluginId);
+            }
+        } else if (type === 'mri-plugin/request-close' || type === 'esc-plugin/close') {
+            Nui.post('close');
+        } else if (type === 'mri-plugin/open-tab' || type === 'esc-plugin/open-tab') {
+            if (data.tab) {
+                store.activeTab = data.tab;
+                Nui.post('routeChanged', { route: data.tab });
+            }
+        } else if (type === 'esc-plugin/notify' || type === 'mri-plugin/notify') {
+            if (data.action === 'updateGems' && data.gems !== undefined) {
+                if (store.player) store.player.gems = data.gems;
+                if (store.vip) store.vip.gems = data.gems;
+            }
+        }
+    },
+
     onMessage(event) {
+        if (!event.data) return;
+
+        // Check if message came from an embedded plugin iframe
+        const msgType = event.data.type || event.data.action;
+        if (typeof msgType === 'string' && (msgType.startsWith('mri-plugin/') || msgType.startsWith('esc-plugin/'))) {
+            this.handlePluginMessage(event.data);
+            return;
+        }
+
         const { action, ...data } = event.data;
         const store = Alpine.store('ui');
         if (!store) return;
@@ -50,13 +85,31 @@ const App = {
                     money: data.money,
                     bank: data.bank,
                     gems: data.gems !== undefined ? data.gems : (data.vip ? (data.vip.gems ?? data.vip.coins ?? 0) : 0),
-                    playersOn: data.playersOn
+                    playersOn: data.playersOn,
+                    avatar: data.avatar || '',
+                    location: data.location || ''
                 };
                 if (data.vip) store.updateVip(data.vip);
+                if (data.vip?.mira) {
+                    store.mira = { ...store.mira, ...data.vip.mira };
+                    window.miraPermanente?.draw(store.mira);
+                    window.miraPreview?.draw(store.mira);
+                }
                 if (data.tabs) store.tabs = data.tabs;
                 store.isAdmin   = data.isAdmin || false;
-                store.activeTab = 'inicio';
                 store.isOpen    = true;
+                document.documentElement.classList.remove('cef-dormant');
+
+                if (data.initialTab) {
+                    if (data.initialTab.startsWith('plugin:')) {
+                        const pluginId = data.initialTab.replace('plugin:', '');
+                        store.openPlugin(pluginId);
+                    } else {
+                        store.activeTab = data.initialTab;
+                    }
+                } else {
+                    store.activeTab = 'inicio';
+                }
 
                 if (data.playerX !== undefined && data.playerY !== undefined) {
                     setTimeout(() => {
@@ -70,7 +123,44 @@ const App = {
 
             case 'hideMenu':
                 store.isOpen = false;
+                document.documentElement.classList.add('cef-dormant');
+                if (store.plugins && store.plugins.length) {
+                    store.plugins.forEach(p => store.notifyPluginVisibility(p.id, false));
+                }
                 window.dispatchEvent(new Event('mri:cleanup'));
+                break;
+
+            case 'pluginsUpdated':
+                if (data.data?.plugins) {
+                    store.setPlugins(data.data.plugins);
+                } else if (data.plugins) {
+                    store.setPlugins(data.plugins);
+                }
+                break;
+
+            case 'navigate':
+                if (data.data) {
+                    const target = data.data;
+                    if (target.route && target.route.startsWith('plugin:')) {
+                        const pluginId = target.pluginId || target.route.replace('plugin:', '');
+                        store.openPlugin(pluginId, target);
+                    } else if (target.route) {
+                        store.activeTab = target.route;
+                        Nui.post('routeChanged', { route: target.route });
+                    }
+                }
+                break;
+
+            case 'openPlugin':
+                if (data.pluginId) {
+                    store.openPlugin(data.pluginId, data.opts);
+                }
+                break;
+
+            case 'closePlugin':
+                if (store.activeTab === ('plugin:' + data.pluginId) || !data.pluginId) {
+                    Nui.post('close');
+                }
                 break;
 
             case 'miraData':
@@ -98,6 +188,14 @@ const App = {
                 }
                 if (store.vip) {
                     store.vip.coins = data.gems || 0;
+                    store.vip.gems = data.gems || 0;
+                }
+                const gemIframe = document.getElementById('plugin-iframe-gem_store');
+                if (gemIframe && gemIframe.contentWindow) {
+                    gemIframe.contentWindow.postMessage({
+                        type: 'mri-plugin/updateGems',
+                        gems: data.gems || 0
+                    }, '*');
                 }
                 break;
 
@@ -120,5 +218,9 @@ const App = {
     }
 };
 
-App.init();
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => App.init());
+} else {
+    App.init();
+}
 window.App = App;

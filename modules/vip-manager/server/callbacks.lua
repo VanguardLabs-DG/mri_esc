@@ -7,13 +7,9 @@ lib.callback.register('mri_esc:server:getVipData', function(source)
     if not player then return nil end
 
     local vipTier = player.PlayerData.metadata['vip'] or 'nenhum'
-    local gems = 0
-    if GetResourceState('dp_sistema_gemas') == 'started' then
-        gems = exports['dp_sistema_gemas']:GetGems(source) or 0
-    elseif player.PlayerData.money and player.PlayerData.money.coin then
-        gems = player.PlayerData.money.coin or 0
-    end
-    local coins = gems
+    local moneyData = player.PlayerData.money or {}
+    local gems = tonumber(moneyData.gems) or 0
+    local coins = tonumber(moneyData.coin) or 0
     local cid   = player.PlayerData.citizenid
 
     local vipConfigs = GetVipConfigs()
@@ -41,6 +37,18 @@ lib.callback.register('mri_esc:server:getVipData', function(source)
         player.PlayerData.charinfo.firstname or "",
         player.PlayerData.charinfo.lastname  or "")
 
+    -- Obter avatar do Discord com fallback gracioso via vanguard.discord.getAvatar
+    local discordAvatar = nil
+    if vanguard and vanguard.discord and vanguard.discord.getAvatar then
+        local ok, av = pcall(vanguard.discord.getAvatar, source)
+        if ok and av and av ~= "" then
+            discordAvatar = av
+        end
+    end
+
+    -- Obter dados de mira customizada salvos em metadata do jogador
+    local customCrosshair = (player.PlayerData and player.PlayerData.metadata) and player.PlayerData.metadata['custom_crosshair'] or nil
+
     return {
         tier          = vipTier,
         label         = currentVipInfo.label    or "Nenhum",
@@ -61,6 +69,8 @@ lib.callback.register('mri_esc:server:getVipData', function(source)
         charName      = charName,
         charJob       = player.PlayerData.job.label or 'Desempregado',
         citizenId     = cid,
+        avatar        = discordAvatar,
+        mira          = customCrosshair,
         isAdmin       = IsAdminPlayer(source) == true, -- Explicit boolean
         allPlans      = (function()
             local p = {}
@@ -71,6 +81,10 @@ lib.callback.register('mri_esc:server:getVipData', function(source)
                         label = cfg.label,
                         payment = cfg.payment,
                         inventory = cfg.inventory,
+                        priceGems = cfg.priceGems or 500,
+                        priceReal = cfg.priceReal or "50,00",
+                        badge = cfg.badge or "VIP",
+                        featured = cfg.featured or false,
                         benefits = cfg.benefits,
                         rewards = cfg.rewards or {},
                         vehicle = cfg.vehicle or nil
@@ -80,6 +94,84 @@ lib.callback.register('mri_esc:server:getVipData', function(source)
             table.sort(p, function(a,b) return (tonumber(a.payment) or 0) < (tonumber(b.payment) or 0) end)
             return p
         end)()
+    }
+end)
+
+-- =============================================================
+--  mri_esc — Custom Crosshair NetEvent
+-- =============================================================
+if not _G.mri_esc_saveMira_registered then
+    _G.mri_esc_saveMira_registered = true
+    if vanguard and vanguard.registerServerEvent then
+        vanguard.registerServerEvent('mri_esc:server:saveMira', {
+            rateLimit = 1000,
+            validateArgs = { 'table' }
+        }, function(source, miraData)
+            local player = exports.qbx_core:GetPlayer(source)
+            if not player then return end
+            player.Functions.SetMetaData('custom_crosshair', miraData)
+        end)
+    else
+        RegisterNetEvent('mri_esc:server:saveMira', function(miraData)
+            local src = source
+            if type(miraData) ~= 'table' then return end
+            local player = exports.qbx_core:GetPlayer(src)
+            if not player then return end
+            player.Functions.SetMetaData('custom_crosshair', miraData)
+        end)
+    end
+end
+
+lib.callback.register('mri_esc:vip:buyWithGems', function(source, data)
+    if vanguard and vanguard.rateLimit then
+        local allowed = vanguard.rateLimit(source, "vip_buy", 1500)
+        if allowed == false then
+            return { success = false, error = "Aguarde um instante antes de realizar outra transação." }
+        end
+    end
+    local player = exports.qbx_core:GetPlayer(source)
+    if not player then return { success = false, error = "Jogador não encontrado." } end
+
+    local tier = data and data.tier
+    if not tier then return { success = false, error = "Plano inválido." } end
+
+    local cfg = GetVipConfigs()
+    local plan = cfg[tier]
+    if not plan or tier == 'nenhum' then
+        return { success = false, error = "Plano VIP não configurado." }
+    end
+
+    local priceGems = tonumber(plan.priceGems) or 500
+    local playerGems = exports.qbx_core:GetMoney(source, 'gems') or 0
+
+    if playerGems < priceGems then
+        return { 
+            success = false, 
+            needGems = true,
+            error = string.format("Você possui %d Gemas, mas são necessárias %d Gemas para este plano.", playerGems, priceGems)
+        }
+    end
+
+    local removed = exports.qbx_core:RemoveMoney(source, 'gems', priceGems, 'Compra VIP ' .. plan.label)
+    if not removed then
+        return { success = false, error = "Falha ao debitar Gemas. Tente novamente." }
+    end
+
+    local cid = player.PlayerData.citizenid
+    local granted = GrantVip(cid, tier, 30, 'ingame_gems')
+    if not granted then
+        exports.qbx_core:AddMoney(source, 'gems', priceGems, 'Estorno VIP ' .. plan.label)
+        return { success = false, error = "Erro ao conceder privilégios VIP." }
+    end
+
+    local newGems = exports.qbx_core:GetMoney(source, 'gems') or 0
+    Player(source).state:set('gems', newGems, true)
+    TriggerClientEvent('mri_esc:client:refreshVip', source)
+
+    return { 
+        success = true, 
+        message = string.format("Parabéns! Seu %s foi ativado por 30 dias!", plan.label),
+        newGems = newGems
     }
 end)
 

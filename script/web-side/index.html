@@ -1,16 +1,22 @@
 <!DOCTYPE html>
-<html>
+<html class="cef-dormant">
 
 <head>
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<script src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.3/dist/cdn.min.js" defer></script>
-	<script type="module" src="https://unpkg.com/gta-v-map"></script>
-	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-	<link
-		href="https://fonts.googleapis.com/css2?family=Sora:wght@100..800&family=Urbanist:ital,wght@0,100..900;1,100..900&display=swap"
-		rel="stylesheet">
-	<link href="css.css?v=5.2" rel="stylesheet" type="text/css" />
+	<!-- Local Offline Vendor Assets via vanguard_lib (0ms Latency, Zero CDN Dependency) -->
+	<link rel="stylesheet" href="https://cfx-nui-vanguard_lib/vendor/fontawesome/css/all.min.css">
+	<link rel="stylesheet" href="https://cfx-nui-vanguard_lib/vendor/fonts/fonts.css">
+	<link rel="stylesheet" href="https://cfx-nui-vanguard_lib/vendor/css/vanguard-tokens.css">
+	<link href="css.css?v=5.3" rel="stylesheet" type="text/css" />
+
+	<!-- Core Logic & Stores (Loaded before Alpine to ensure alpine:init and components exist) -->
+	<script src="state/bridge.js"></script>
+	<script src="state/renderer.js"></script>
+	<script src="state/ui_store.js"></script>
+	<script src="state/components.js"></script>
+	<script src="app.js" defer></script>
+	<script src="https://cfx-nui-vanguard_lib/vendor/alpine/alpine.min.js" defer></script>
 </head>
 
 <body x-data="appRoot()">
@@ -37,7 +43,7 @@
 			<!-- Player Profile -->
 			<div class="sidebar-profile">
 				<div class="profile-avatar-wrap">
-					<img src="assets/imagem-invalida-user.png" alt="Avatar" class="profile-avatar-img">
+					<img :src="store.player.avatar || 'assets/imagem-invalida-user.png'" @error="$el.src='assets/imagem-invalida-user.png'" alt="Avatar" class="profile-avatar-img">
 					<div class="profile-vip-crown" x-show="store.vip.tier !== 'nenhum'" x-transition>
 						<i class="fa-solid fa-crown"></i>
 					</div>
@@ -48,6 +54,7 @@
 					<i class="fa-solid fa-wrench"></i>
 					<span x-text="store.player.job"></span>
 				</div>
+				<div class="profile-location" x-show="store.player.location"><i class="fa-solid fa-location-dot"></i> <span x-text="store.player.location"></span></div>
 			</div>
 
 			<!-- VIP Highlights (Fixo acima das finanças) -->
@@ -115,7 +122,8 @@
 				</div>
 
 				<!-- Loja de Gemas (Destaque) -->
-				<div class="nav-item nav-gems-item" @click="openGemasStore()" title="Abrir Loja de Gemas">
+				<div class="nav-item nav-gems-item" :class="{ 'nav-active': store.activeTab === 'plugin:gem_store' }"
+					@click="store.openGemasStore()" title="Abrir Loja de Gemas">
 					<div class="nav-item-icon gems-nav-icon"><img src="assets/gem_diamond.png?v=5.1" alt="Gemas" class="gems-nav-img"></div>
 					<span class="nav-item-label">LOJA DE GEMAS</span>
 					<div class="nav-gems-pill">LOJA</div>
@@ -137,6 +145,21 @@
 							<i :class="'fa-solid ' + (tab.icon.startsWith('fa-') ? tab.icon : 'fa-' + tab.icon)"></i>
 						</div>
 						<span class="nav-item-label" x-text="tab.label"></span>
+					</div>
+				</template>
+
+				<!-- Dynamic Plugins (External & Modular Apps) -->
+				<template x-for="plugin in store.plugins" :key="plugin.id">
+					<div x-show="plugin.id !== 'gem_store'" class="nav-item nav-plugin-item"
+						:class="{ 'nav-active': store.activeTab === ('plugin:' + plugin.id) }"
+						@click="store.openPlugin(plugin.id)">
+						<div class="nav-item-icon">
+							<i :class="plugin.icon && plugin.icon.startsWith('fa-') ? plugin.icon : ('fa-solid fa-' + (plugin.icon || 'puzzle-piece'))"></i>
+						</div>
+						<span class="nav-item-label" x-text="plugin.label"></span>
+						<template x-if="plugin.badge">
+							<div class="nav-plugin-pill" x-text="plugin.badge"></div>
+						</template>
 					</div>
 				</template>
 
@@ -232,7 +255,7 @@
 				</div>
 
 				<!-- LOJA DE GEMAS BANNER -->
-				<div class="gems-teaser" @click="openGemasStore()">
+				<div class="gems-teaser" @click="store.openGemasStore()">
 					<div class="gems-teaser-art"></div>
 					<div class="gems-teaser-left">
 						<img src="assets/gem_diamond.png?v=5.1" alt="Gemas" class="gems-teaser-gem-img">
@@ -246,7 +269,7 @@
 							<span class="gbp-label">SEU SALDO</span>
 							<span class="gbp-val"><i class="fa-solid fa-gem"></i> <span x-text="store.formatGems(store.player.gems) + ' GEMAS'"></span></span>
 						</div>
-						<div class="gems-teaser-btn" @click.stop="openGemasStore()">ABRIR LOJA <i class="fa-solid fa-arrow-up-right-from-square"></i></div>
+						<div class="gems-teaser-btn" @click.stop="store.openGemasStore()">ABRIR LOJA <i class="fa-solid fa-arrow-up-right-from-square"></i></div>
 					</div>
 				</div>
 
@@ -306,20 +329,19 @@
 					<div class="hero-body hero-body-locked" x-show="store.vip.tier === 'nenhum'">
 						<div class="hero-crown hero-lock"><i class="fa-solid fa-lock"></i></div>
 						<div class="hero-tier hero-tier-locked">DESBLOQUEIE O VIP</div>
-						<div class="hero-status-text hero-status-locked">Transforme sua experiência. Ganhe renda
-							passiva.</div>
+						<div class="hero-status-text hero-status-locked">Transforme sua experiência. Ganhe renda passiva.</div>
 					</div>
 
 					<div class="hero-fade"></div>
 				</div>
 
-				<!-- SECTION: BENEFÍCIOS ATIVOS -->
+				<!-- SECTION: BENEFÍCIOS DO PLANO -->
 				<div class="vip-section-header">
-					<i class="fa-solid fa-star"></i> BENEFÍCIOS ATIVOS DO PLANO
+					<i class="fa-solid fa-star"></i> BENEFÍCIOS DO PLANO
 				</div>
 				<div class="vip-stats">
 					<div class="vstat">
-						<div class="vstat-icon si-gold"><i class="fa-solid fa-gem"></i></div>
+						<div class="vstat-icon si-gold"><i class="fa-solid fa-crown"></i></div>
 						<div>
 							<div class="vstat-label">Plano Atual</div>
 							<div class="vstat-val" x-text="store.vip.label"></div>
@@ -339,11 +361,11 @@
 							<div class="vstat-val" x-text="store.vip.inventory + ' kg'"></div>
 						</div>
 					</div>
-					<div class="vstat" @click="openGemasStore()" style="cursor: pointer;" title="Abrir Loja de Gemas">
+					<div class="vstat" @click="store.openGemasStore()" style="cursor: pointer;" title="Abrir Loja de Gemas">
 						<div class="vstat-icon si-gems"><i class="fa-solid fa-gem"></i></div>
 						<div>
 							<div class="vstat-label">Saldo de Gemas</div>
-							<div class="vstat-val" style="color: #00e5ff;" x-text="store.formatGems(store.player.gems) + ' Gemas'"></div>
+							<div class="vstat-val" style="color: var(--blue-l);" x-text="store.formatGems(store.player.gems) + ' Gemas'"></div>
 						</div>
 					</div>
 				</div>
@@ -366,8 +388,7 @@
 						<div class="metric-card"
 							:class="store.vip.isExpired ? 'mc-danger' : (store.vip.daysLeft !== null && store.vip.daysLeft <= 7 ? 'mc-warn' : 'mc-gold')">
 							<div class="mc-icon">
-								<i
-									:class="store.vip.daysLeft === null ? 'fa-solid fa-infinity' : (store.vip.isExpired ? 'fa-solid fa-ban' : 'fa-solid fa-calendar-xmark')"></i>
+								<i :class="store.vip.daysLeft === null ? 'fa-solid fa-infinity' : (store.vip.isExpired ? 'fa-solid fa-ban' : 'fa-solid fa-calendar-xmark')"></i>
 							</div>
 							<div class="mc-body">
 								<div class="mc-label">Expiração do Plano</div>
@@ -401,21 +422,20 @@
 						x-transition>
 						<i class="fa-solid fa-triangle-exclamation"></i>
 						<span>Seu VIP expira em <b x-text="store.vip.daysLeft + ' dias'"></b>. Renove agora para não perder seus benefícios!</span>
-						<div class="expiry-renew-btn">RENOVAR AGORA</div>
+						<div class="expiry-renew-btn" @click="store.openVipAcquireModal(store.plans[0] || { label: 'VIP' })">RENOVAR AGORA</div>
 					</div>
 
 					<div class="expiry-warning expiry-danger" x-show="store.vip.isExpired" x-transition>
 						<i class="fa-solid fa-ban"></i>
 						<span>Seu VIP está <b>expirado</b>. Renove para reativar todos os benefícios imediatamente.</span>
-						<div class="expiry-renew-btn">REATIVAR VIP</div>
+						<div class="expiry-renew-btn" @click="store.openVipAcquireModal(store.plans[0] || { label: 'VIP' })">REATIVAR VIP</div>
 					</div>
 				</div>
 
-
-				<!-- Main Body -->
+				<!-- Main Body: Comparativo + Timer + CTA -->
 				<div class="vip-body">
 
-					<!-- Left Column -->
+					<!-- Left Column: Comparativo -->
 					<div class="vip-col-left">
 
 						<!-- Benefits (if VIP) -->
@@ -433,47 +453,51 @@
 
 						<!-- Comparison Table -->
 						<div class="vip-block comparison-vip-block">
-							<div class="vblock-title gold-title"><i class="fa-solid fa-table-columns"></i> COMPARATIVO
-								DE PLANOS</div>
+							<div class="vblock-title gold-title"><i class="fa-solid fa-table-columns"></i> COMPARATIVO DE BENEFÍCIOS</div>
 							<div class="comp-table">
 								<div class="ct-head">
 									<div class="ct-feat">Benefício</div>
 									<div class="ct-free">GRATUITO</div>
-									<div class="ct-vip"
-										x-text="(store.plans[0] ? store.plans[0].label : 'VIP TIER 1').toUpperCase()">
-									</div>
+									<div class="ct-vip" x-text="(store.plans[0] ? store.plans[0].label : 'VIP').toUpperCase()"></div>
 								</div>
 								<div class="ct-row">
-									<div class="ct-feat">Salário Automático</div>
+									<div class="ct-feat">Salário Automático a cada 30m</div>
 									<div class="ct-free"><i class="fa-solid fa-xmark ct-no"></i></div>
-									<div class="ct-vip"><i class="fa-solid fa-check ct-yes"></i></div>
+									<div class="ct-vip ct-yes"><i class="fa-solid fa-check ct-yes"></i></div>
 								</div>
 								<div class="ct-row">
 									<div class="ct-feat">Valor do Salário</div>
 									<div class="ct-free">R$ 0</div>
-									<div class="ct-vip"
-										x-text="store.formatMoney(store.plans[0] ? store.plans[0].payment : 0)"></div>
+									<div class="ct-vip" x-text="store.formatMoney(store.plans[0] ? store.plans[0].payment : 55000)"></div>
 								</div>
 								<div class="ct-row">
-									<div class="ct-feat">Peso Extra Inv.</div>
+									<div class="ct-feat">Capacidade Extra de Mochila</div>
 									<div class="ct-free">0 kg</div>
-									<div class="ct-vip"
-										x-text="(store.plans[0] ? store.plans[0].inventory : 0) + ' kg'"></div>
+									<div class="ct-vip" x-text="(store.plans[0] ? store.plans[0].inventory : 175) + ' kg'"></div>
 								</div>
-								<!-- Itens dinâmicos do plano principal -->
-								<template x-for="benefit in (store.plans[0] ? (store.plans[0].benefits || []) : [])"
-									:key="benefit">
+								<div class="ct-row">
+									<div class="ct-feat">Prioridade na Fila do Servidor</div>
+									<div class="ct-free"><i class="fa-solid fa-xmark ct-no"></i></div>
+									<div class="ct-vip ct-yes"><i class="fa-solid fa-check ct-yes"></i></div>
+								</div>
+								<div class="ct-row">
+									<div class="ct-feat">Acesso a Garagem e Veículos VIP</div>
+									<div class="ct-free"><i class="fa-solid fa-xmark ct-no"></i></div>
+									<div class="ct-vip ct-yes"><i class="fa-solid fa-check ct-yes"></i></div>
+								</div>
+								<!-- Dynamic Perks -->
+								<template x-for="benefit in (store.plans[0] ? (store.plans[0].benefits || []) : [])" :key="benefit">
 									<div class="ct-row">
 										<div class="ct-feat" x-text="benefit"></div>
 										<div class="ct-free"><i class="fa-solid fa-xmark ct-no"></i></div>
-										<div class="ct-vip"><i class="fa-solid fa-check ct-yes"></i></div>
+										<div class="ct-vip ct-yes"><i class="fa-solid fa-check ct-yes"></i></div>
 									</div>
 								</template>
 							</div>
 						</div>
 					</div>
 
-					<!-- Right Column -->
+					<!-- Right Column: Timer & CTA -->
 					<div class="vip-col-right">
 
 						<!-- Circular Paycheck Timer -->
@@ -498,22 +522,23 @@
 
 						<!-- CTA Block (no VIP) -->
 						<div class="vip-block cta-vip-block" x-show="store.vip.tier === 'nenhum'">
-							<div class="vblock-title"><i class="fa-solid fa-fire" style="color: var(--red);"></i> <span
-									style="color: var(--gold);">OFERTA EXCLUSIVA</span></div>
-							<div class="cta-plan-name" x-text="store.plans[0] ? store.plans[0].label : 'VIP TIER 1'">
+							<div class="vblock-title">
+								<i class="fa-solid fa-crown" style="color: var(--gold);"></i>
+								<span style="color: var(--gold);">OFERTA EXCLUSIVA</span>
 							</div>
+							<div class="cta-plan-name" x-text="store.plans[0] ? store.plans[0].label : 'VIP TIER 1'"></div>
 							<div class="cta-perks">
-								<template x-for="benefit in (store.plans[0] ? (store.plans[0].benefits || []) : [])"
-									:key="benefit">
-									<div class="cta-perk"><i class="fa-solid fa-bolt"></i> <span
-											x-text="benefit"></span></div>
-								</template>
+								<div class="cta-perk"><i class="fa-solid fa-bolt"></i> <span>Salário passivo automático no banco</span></div>
+								<div class="cta-perk"><i class="fa-solid fa-bolt"></i> <span>Mochila e inventário expandido</span></div>
+								<div class="cta-perk"><i class="fa-solid fa-bolt"></i> <span>Prioridade na fila do servidor</span></div>
+								<div class="cta-perk"><i class="fa-solid fa-bolt"></i> <span>Acesso aos veículos exclusivos</span></div>
 							</div>
-							<div class="btn-cta-buy">
+							<div class="btn-cta-buy" @click="store.openVipAcquireModal(store.plans[0] || { label: 'VIP Ouro', priceGems: 500, priceReal: '50,00' })">
 								<div class="btn-shimmer"></div>
-								<i class="fa-solid fa-crown"></i> ADQUIRIR VIP AGORA
+								<i class="fa-solid fa-crown"></i>
+								<span>ADQUIRIR VIP AGORA</span>
 							</div>
-							<div class="cta-note">Contate um admin ou acesse a loja do servidor</div>
+							<div class="cta-note">Ativação instantânea via Gemas ou Loja Oficial</div>
 						</div>
 
 						<!-- Already VIP block -->
@@ -523,8 +548,7 @@
 								<div class="premium-icon"><i class="fa-solid fa-shield-halved"></i></div>
 								<div>
 									<div class="premium-name">Você é VIP!</div>
-									<div class="premium-desc">Aproveite todos os benefícios exclusivos. Renove seu plano
-										para continuar.</div>
+									<div class="premium-desc">Aproveite todos os benefícios exclusivos ativos na sua conta.</div>
 								</div>
 							</div>
 						</div>
@@ -672,6 +696,116 @@
 					</div>
 				</div>
 			</div>
+
+			<!-- ======= DYNAMIC PLUGIN HOST (IFRAMES / KEEP-ALIVE & LAZY LOAD) ======= -->
+			<template x-for="plugin in store.plugins" :key="plugin.id">
+				<div class="panel-content plugin-panel-container"
+					x-show="store.isOpen && store.activeTab === ('plugin:' + plugin.id)"
+					:id="'plugin-panel-' + plugin.id"
+					style="display: none; width: 100%; height: 100%; padding: 0; margin: 0; position: relative; overflow: hidden;">
+					
+					<!-- Loading spinner while iframe initializes -->
+					<div class="plugin-loading-spinner" x-show="store.mountedPlugins[plugin.id] && !store.loadedPlugins[plugin.id]">
+						<i class="fa-solid fa-circle-notch fa-spin"></i>
+						<span x-text="'Carregando ' + plugin.label + '...'"></span>
+					</div>
+
+					<template x-if="store.mountedPlugins[plugin.id]">
+						<iframe :src="store.getPluginUrl(plugin)"
+							class="plugin-iframe"
+							:id="'plugin-iframe-' + plugin.id"
+							@load="store.onPluginLoaded(plugin.id)"
+							allow="clipboard-read; clipboard-write">
+						</iframe>
+					</template>
+				</div>
+			</template>
+
+		<!-- ================================================
+		     MODAL: ADQUIRIR VIP (FLUXO INTERATIVO DE MONETIZAÇÃO)
+		     ================================================ -->
+		<div class="vip-modal-backdrop" x-show="store.vipAcquireModal.isOpen" x-transition.opacity @click.self="store.closeVipAcquireModal()" style="display: none;">
+			<div class="vip-modal-card" x-show="store.vipAcquireModal.isOpen" x-transition.scale>
+				<div class="vm-close" @click="store.closeVipAcquireModal()"><i class="fa-solid fa-xmark"></i></div>
+				
+				<div class="vm-header">
+					<div class="vm-crown"><i class="fa-solid fa-crown"></i></div>
+					<div class="vm-title" x-text="'ADQUIRIR ' + (store.vipAcquireModal.plan?.label || 'VIP').toUpperCase()"></div>
+					<div class="vm-sub">Escolha sua forma preferida de desbloqueio para ativar seus benefícios</div>
+				</div>
+
+				<div class="vm-plan-summary">
+					<div class="vm-sum-item">
+						<span class="vms-label">Salário / 30m:</span>
+						<span class="vms-val" x-text="store.formatMoney(store.vipAcquireModal.plan?.payment || 0)"></span>
+					</div>
+					<div class="vm-sum-item">
+						<span class="vms-label">Capacidade Mochila:</span>
+						<span class="vms-val" x-text="(store.vipAcquireModal.plan?.inventory || 0) + ' kg'"></span>
+					</div>
+					<div class="vm-sum-item">
+						<span class="vms-label">Veículo Exclusivo:</span>
+						<span class="vms-val" x-text="store.vipAcquireModal.plan?.vehicle?.name || 'Incluso'"></span>
+					</div>
+				</div>
+
+				<!-- Feedback Alert -->
+				<div class="vm-alert" x-show="store.vipAcquireModal.feedbackMsg" :class="'vm-alert-' + store.vipAcquireModal.feedbackType" x-transition>
+					<i :class="store.vipAcquireModal.feedbackType === 'success' ? 'fa-solid fa-circle-check' : 'fa-solid fa-triangle-exclamation'"></i>
+					<span x-text="store.vipAcquireModal.feedbackMsg"></span>
+				</div>
+
+				<!-- Purchase Options -->
+				<div class="vm-options">
+					<!-- Option 1: Buy with in-game Gems -->
+					<div class="vm-option-card" :class="{ 'disabled': store.vipAcquireModal.loading }" @click="store.buyVipWithGems()">
+						<div class="vmo-icon vmo-gem"><i class="fa-solid fa-gem"></i></div>
+						<div class="vmo-body">
+							<div class="vmo-title">ATIVAR COM GEMAS (INSTANTÂNEO)</div>
+							<div class="vmo-desc">
+								Preço: <b style="color: #00e5ff;" x-text="(store.vipAcquireModal.plan?.priceGems || 500) + ' Gemas'"></b>
+								· Seu saldo: <span style="font-weight: 700;" x-text="store.formatGems(store.player.gems) + ' Gemas'"></span>
+							</div>
+						</div>
+						<div class="vmo-action">
+							<button class="vmo-btn vmo-btn-gems" :disabled="store.vipAcquireModal.loading">
+								<span x-show="!store.vipAcquireModal.loading">ATIVAR AGORA</span>
+								<span x-show="store.vipAcquireModal.loading"><i class="fa-solid fa-spinner fa-spin"></i></span>
+							</button>
+						</div>
+					</div>
+
+					<!-- Option 1.1: If need gems, direct shortcut to Gem Store -->
+					<div class="vm-option-card vm-opt-store" x-show="store.vipAcquireModal.needGems || (store.player.gems < (store.vipAcquireModal.plan?.priceGems || 500))" @click="store.closeVipAcquireModal(); store.openGemasStore()">
+						<div class="vmo-icon vmo-store"><i class="fa-solid fa-basket-shopping"></i></div>
+						<div class="vmo-body">
+							<div class="vmo-title">RECARREGAR GEMAS NA LOJA</div>
+							<div class="vmo-desc">Saldo insuficiente. Acesse a Loja de Gemas oficial para recarregar sua conta agora.</div>
+						</div>
+						<div class="vmo-action">
+							<button class="vmo-btn vmo-btn-cyan">ABRIR LOJA <i class="fa-solid fa-arrow-right"></i></button>
+						</div>
+					</div>
+
+					<!-- Option 2: Copy Discord/Tebex Store Link -->
+					<div class="vm-option-card" @click="store.copyStoreLink()">
+						<div class="vmo-icon vmo-discord"><i class="fa-brands fa-discord"></i></div>
+						<div class="vmo-body">
+							<div class="vmo-title">LOJA WEB / DISCORD (PIX & CARTÃO)</div>
+							<div class="vmo-desc">
+								Valor: <b style="color: #f5b945;" x-text="'R$ ' + (store.vipAcquireModal.plan?.priceReal || '50,00')"></b>
+								· Chave Pix e Cartão com ativação automática
+							</div>
+						</div>
+						<div class="vmo-action">
+							<button class="vmo-btn vmo-btn-discord">
+								<span x-text="store.vipAcquireModal.copied ? 'COPIADO! ✓' : 'COPIAR LINK'"></span>
+							</button>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
 
 		</main>
 
@@ -1082,7 +1216,7 @@
 										<div class="item-search-results" x-show="itemSearch.length > 0">
 											<template x-for="item in filteredItems()" :key="item.name">
 												<div class="search-item-row" @click="addReward(item)">
-													<img :src="getItemImage(item.name)" @error="$el.src='nui://ox_inventory/web/images/unknown.png'" class="search-item-icon">
+													<img :src="getItemImage(item.name)" @error="$el.style.display='none'" class="search-item-icon">
 													<div class="search-item-info">
 														<span class="si-label" x-text="item.label"></span>
 														<span class="si-name" x-text="item.name"></span>
@@ -1128,12 +1262,6 @@
 		</div>
 	</div>
 
-	<!-- Core Logic -->
-	<script src="state/bridge.js"></script>
-	<script src="state/renderer.js"></script>
-	<script src="state/ui_store.js"></script>
-	<script src="state/components.js"></script>
-	<script src="app.js"></script>
 </body>
 
 </html>
