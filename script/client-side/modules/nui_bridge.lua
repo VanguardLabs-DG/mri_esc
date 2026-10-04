@@ -11,10 +11,31 @@ end)
 RegisterNUICallback("openNativeMap", function(_, cb)
     print("[vanguard_esc] NUI Callback 'openNativeMap' received")
     closeMenu(true)
-    Wait(300)
-    ActivateFrontendMenu(GetHashKey("FE_MENU_VERSION_MP_PAUSE"), 0, -1)
+    isNativeMapOpen = true
+    
+    CreateThread(function()
+        Wait(150)
+        ActivateFrontendMenu(GetHashKey("FE_MENU_VERSION_MP_PAUSE"), 0, -1)
+        Wait(100)
+        PauseMenuceptionGoDeeper(0)
+
+        while isNativeMapOpen and IsPauseMenuActive() do
+            Wait(0)
+            if IsControlJustPressed(0, 200) or IsDisabledControlJustPressed(0, 200)
+            or IsControlJustPressed(0, 199) or IsDisabledControlJustPressed(0, 199)
+            or IsControlJustPressed(0, 202) or IsDisabledControlJustPressed(0, 202)
+            or IsControlJustPressed(0, 177) or IsDisabledControlJustPressed(0, 177) then
+                SetFrontendActive(false)
+                break
+            end
+        end
+        lastMapClose = GetGameTimer()
+        isNativeMapOpen = false
+    end)
+
     if cb then cb({ success = true }) end
 end)
+
 
 RegisterNUICallback("config", function(_, cb)
     print("[vanguard_esc] NUI Callback 'config' received")

@@ -4,6 +4,8 @@
 
 local Config = Config or {}
 open = false
+isNativeMapOpen = false
+lastMapClose = 0
 redesSociais = { instagram = "", tiktok = "", youtube = "" }
 local cachedTabs = nil
 
@@ -75,6 +77,11 @@ end
 
 function OpenMenu(targetTab)
     print("[vanguard_esc] OpenMenu called. Current state 'open':", open, "targetTab:", targetTab)
+
+    if isNativeMapOpen or IsPauseMenuActive() or (GetGameTimer() - (lastMapClose or 0) < 500) then
+        print("[vanguard_esc] Menu open blocked: frontend/map is active or recently closed")
+        return
+    end
 
     if not LocalPlayer.state.isLoggedIn or LocalPlayer.state.inArena or LocalPlayer.state.isDead or LocalPlayer.state.invOpen then
         print("[vanguard_esc] Menu open blocked by player state")
@@ -212,6 +219,17 @@ RegisterNUICallback('saveMira', handleSaveMira)
 RegisterNUICallback('salvarMira', handleSaveMira)
 
 RegisterCommand("open_menu", function()
+    if isNativeMapOpen or IsPauseMenuActive() then
+        SetFrontendActive(false)
+        lastMapClose = GetGameTimer()
+        isNativeMapOpen = false
+        return
+    end
+
+    if GetGameTimer() - (lastMapClose or 0) < 500 then
+        return
+    end
+
     OpenMenu()
 end)
 
