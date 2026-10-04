@@ -30,8 +30,24 @@ RegisterNUICallback("consultComandos", function(_, cb)
 end)
 
 RegisterNUICallback("executarComando", function(data, cb)
-    if data.comando then
-        ExecuteCommand(data.comando)
+    if data and data.comando and type(data.comando) == "string" then
+        local rawCmd = data.comando:match("^/*(.-)%s*$")
+        local isAllowed = false
+        if Config and Config.Comandos then
+            for _, item in ipairs(Config.Comandos) do
+                local allowed = type(item) == "table" and item.comando or item
+                if type(allowed) == "string" and allowed:match("^/*(.-)%s*$"):lower() == rawCmd:lower() then
+                    isAllowed = true
+                    break
+                end
+            end
+        end
+
+        if isAllowed then
+            ExecuteCommand(rawCmd)
+        else
+            print(string.format("[vanguard_esc] Comando NUI bloqueado por não estar na whitelist: '%s'", tostring(data.comando)))
+        end
     end
     if cb then cb({ success = true }) end
 end)

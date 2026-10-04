@@ -18,7 +18,7 @@ function IsAdminPlayer(source)
 
     -- 2. Fallback: Direct ACE Permissions
     if IsPlayerAceAllowed(srcStr, "admin")
-    or IsPlayerAceAllowed(srcStr, "command")
+    or IsPlayerAceAllowed(srcStr, "command.vanguard_admin")
     or IsPlayerAceAllowed(srcStr, "group.admin")
     or IsPlayerAceAllowed(srcStr, "group.superadmin")
     or IsPlayerAceAllowed(srcStr, "group.god") then
