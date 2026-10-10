@@ -59,34 +59,27 @@ end
 -- ── MAIN LOGIC ──────────────────────────────────────────────
 
 function closeMenu(ignoreFrontend)
-    print("[vanguard_esc] Closing Menu...")
     open = false
     SendNUIMessage({ action = "hideMenu" })
     StopScreenEffect("MenuMGSelectionIn")
     StopAllScreenEffects()
     TriggerEvent("hud:Active", true)
-
-    CreateThread(function()
-        if not ignoreFrontend then SetFrontendActive(false) end
-        Wait(150)
-        SetNuiFocus(false, false)
-        print("[vanguard_esc] NUI Focus Released")
-        if not ignoreFrontend then SetFrontendActive(false) end
-    end)
+    SetNuiFocus(false, false)
+    if not ignoreFrontend then
+        SetFrontendActive(false)
+    end
 end
 
 function OpenMenu(targetTab)
-    print("[vanguard_esc] OpenMenu called. Current state 'open':", open, "targetTab:", targetTab)
-
-    if isNativeMapOpen or IsPauseMenuActive() or (GetGameTimer() - (lastMapClose or 0) < 500) then
-        print("[vanguard_esc] Menu open blocked: frontend/map is active or recently closed")
+    if isNativeMapOpen or IsPauseMenuActive() or (GetGameTimer() - (lastMapClose or 0) < 300) then
         return
     end
 
     if not LocalPlayer.state.isLoggedIn or LocalPlayer.state.inArena or LocalPlayer.state.isDead or LocalPlayer.state.invOpen then
-        print("[vanguard_esc] Menu open blocked by player state")
         return
     end
+
+    SetFrontendActive(false)
 
     if open then
         if targetTab then
@@ -102,7 +95,10 @@ function OpenMenu(targetTab)
 
     local playersOn = GetPlayersOnline()
     local playerData = GetPlayerData()
-    local vipData = lib.callback.await('mri_esc:server:getVipData', false)
+    local vipData = nil
+    pcall(function()
+        vipData = lib.callback.await('mri_esc:server:getVipData', 1500)
+    end)
 
     local nome = "Jogador"
     local id = GetPlayerServerId(PlayerId())
@@ -123,11 +119,30 @@ function OpenMenu(targetTab)
         end
     end
 
+    local coins = 0
+    if LocalPlayer and LocalPlayer.state then
+        if LocalPlayer.state.coins ~= nil and tonumber(LocalPlayer.state.coins) then
+            coins = tonumber(LocalPlayer.state.coins)
+        elseif LocalPlayer.state.vipCoins ~= nil and tonumber(LocalPlayer.state.vipCoins) then
+            coins = tonumber(LocalPlayer.state.vipCoins)
+        end
+    end
+    if coins == 0 and playerData and playerData.money and playerData.money.coin then
+        coins = tonumber(playerData.money.coin) or 0
+    end
+    if coins == 0 and vipData and vipData.coins then
+        coins = tonumber(vipData.coins) or 0
+    end
+
     local gems = 0
-    if LocalPlayer and LocalPlayer.state and LocalPlayer.state.gems ~= nil then
-        gems = LocalPlayer.state.gems
-    elseif vipData and (vipData.gems ~= nil or vipData.coins ~= nil) then
-        gems = vipData.gems or vipData.coins or 0
+    if LocalPlayer and LocalPlayer.state and LocalPlayer.state.gems ~= nil and tonumber(LocalPlayer.state.gems) then
+        gems = tonumber(LocalPlayer.state.gems)
+    end
+    if gems == 0 and playerData and playerData.money and playerData.money.gems then
+        gems = tonumber(playerData.money.gems) or 0
+    end
+    if gems == 0 and vipData and vipData.gems then
+        gems = tonumber(vipData.gems) or 0
     end
 
     local isAdmin = vipData and vipData.isAdmin == true
@@ -179,6 +194,7 @@ function OpenMenu(targetTab)
         money      = money,
         bank       = bank,
         gems       = gems,
+        coins      = coins,
         job        = jobText,
         vip        = vipData,
         isAdmin    = isAdmin,
@@ -226,10 +242,16 @@ RegisterCommand("open_menu", function()
         return
     end
 
-    if GetGameTimer() - (lastMapClose or 0) < 500 then
+    if open then
+        closeMenu()
         return
     end
 
+    if GetGameTimer() - (lastMapClose or 0) < 300 then
+        return
+    end
+
+    SetFrontendActive(false)
     OpenMenu()
 end)
 
@@ -237,12 +259,17 @@ RegisterKeyMapping("open_menu", "Abrir Esc Menu", "keyboard", "ESCAPE")
 
 RegisterNetEvent('mri_esc:client:refreshVip', function()
     if open then
-        local vipData = lib.callback.await('mri_esc:server:getVipData', false)
-        local gems = (LocalPlayer and LocalPlayer.state and LocalPlayer.state.gems) or (vipData and (vipData.gems or vipData.coins)) or 0
+        local vipData = nil
+        pcall(function()
+            vipData = lib.callback.await('mri_esc:server:getVipData', 1500)
+        end)
+        local gems = (LocalPlayer and LocalPlayer.state and LocalPlayer.state.gems) or (vipData and vipData.gems) or 0
+        local coins = (LocalPlayer and LocalPlayer.state and (LocalPlayer.state.coins or LocalPlayer.state.vipCoins)) or (vipData and vipData.coins) or 0
         SendNUIMessage({
             action = "updateVipData",
             vip = vipData,
-            gems = gems
+            gems = gems,
+            coins = coins
         })
     end
 end)
@@ -253,7 +280,28 @@ AddStateBagChangeHandler('gems', nil, function(bagName, key, value)
     if ply == PlayerId() and open then
         SendNUIMessage({
             action = "updateGems",
-            gems = value or 0
+            gems = tonumber(value) or 0
+        })
+    end
+end)
+
+-- Real-time Coins statebag synchronization
+AddStateBagChangeHandler('coins', nil, function(bagName, key, value)
+    local ply = GetPlayerFromStateBagName(bagName)
+    if ply == PlayerId() and open then
+        SendNUIMessage({
+            action = "updateCoins",
+            coins = tonumber(value) or 0
+        })
+    end
+end)
+
+AddStateBagChangeHandler('vipCoins', nil, function(bagName, key, value)
+    local ply = GetPlayerFromStateBagName(bagName)
+    if ply == PlayerId() and open then
+        SendNUIMessage({
+            action = "updateCoins",
+            coins = tonumber(value) or 0
         })
     end
 end)
@@ -262,9 +310,15 @@ end)
 CreateThread(function()
     while true do
         Wait(0)
-        DisableControlAction(0, 200, true) -- ESC
+        if not isNativeMapOpen and not IsPauseMenuActive() then
+            DisableControlAction(0, 200, true)
+            if open then
+                DisableControlAction(0, 199, true)
+            end
+        end
     end
 end)
+
 
 -- ── EXPORTS ─────────────────────────────────────────────────
 

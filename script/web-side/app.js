@@ -82,9 +82,10 @@ const App = {
                     name: Utils.sanitize(data.nome),
                     id: data.id,
                     job: Utils.sanitize(data.job),
-                    money: data.money,
-                    bank: data.bank,
-                    gems: data.gems !== undefined ? data.gems : (data.vip ? (data.vip.gems ?? data.vip.coins ?? 0) : 0),
+                    money: Number(data.money) || 0,
+                    bank: Number(data.bank) || 0,
+                    gems: data.gems !== undefined ? Number(data.gems) : (data.vip?.gems || 0),
+                    coins: data.coins !== undefined ? Number(data.coins) : (data.vip?.coins || 0),
                     playersOn: data.playersOn,
                     avatar: data.avatar || '',
                     location: data.location || ''
@@ -179,29 +180,33 @@ const App = {
 
             case 'updateVipData':
                 if (data.vip) store.updateVip(data.vip);
-                if (data.gems !== undefined) store.player.gems = data.gems;
+                if (data.gems !== undefined) store.player.gems = Number(data.gems) || 0;
+                if (data.coins !== undefined) store.player.coins = Number(data.coins) || 0;
                 break;
 
             case 'updateGems':
                 if (store.player) {
-                    store.player.gems = data.gems || 0;
+                    store.player.gems = Number(data.gems) || 0;
                 }
                 if (store.vip) {
-                    store.vip.coins = data.gems || 0;
-                    store.vip.gems = data.gems || 0;
+                    store.vip.gems = Number(data.gems) || 0;
                 }
                 const gemIframe = document.getElementById('plugin-iframe-gem_store');
                 if (gemIframe && gemIframe.contentWindow) {
                     gemIframe.contentWindow.postMessage({
                         type: 'mri-plugin/updateGems',
-                        gems: data.gems || 0
+                        gems: Number(data.gems) || 0
                     }, '*');
                 }
                 break;
 
             case 'updateCoins':
-                store.player.money = data.coins;
-                store.player.bank = data.coinsArma;
+                if (store.player) {
+                    store.player.coins = Number(data.coins) || 0;
+                }
+                if (store.vip) {
+                    store.vip.coins = Number(data.coins) || 0;
+                }
                 break;
 
             case 'adminActionResult':

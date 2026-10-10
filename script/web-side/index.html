@@ -99,11 +99,18 @@
 						<div class="finance-value" x-text="store.formatMoney(store.player.bank)"></div>
 					</div>
 				</div>
+				<div class="finance-row finance-coins" title="Saldo de Coins (Imobiliária e Concessionária)">
+					<div class="finance-icon coins-icon"><i class="fa-solid fa-coins" style="color: #e5a93c;"></i></div>
+					<div class="finance-info">
+						<div class="finance-label">COINS</div>
+						<div class="finance-value coins-value" x-text="store.formatGems(store.player.coins || 0) + ' Coins'"></div>
+					</div>
+				</div>
 				<div class="finance-row finance-gems" @click="openGemasStore()" title="Abrir Loja de Gemas">
 					<div class="finance-icon gems-icon"><img src="assets/gem_diamond.png?v=5.1" alt="Gemas" class="gems-finance-img"></div>
 					<div class="finance-info">
 						<div class="finance-label">GEMAS</div>
-						<div class="finance-value gems-value" x-text="store.formatGems(store.player.gems) + ' Gemas'"></div>
+						<div class="finance-value gems-value" x-text="store.formatGems(store.player.gems || 0) + ' Gemas'"></div>
 					</div>
 					<div class="finance-gems-btn"><i class="fa-solid fa-chevron-right"></i></div>
 				</div>
@@ -1015,7 +1022,7 @@
 			</div>
 
 			<!-- ===== MODAL: Grant / Extend ===== -->
-			<div class="adm-modal-backdrop" x-show="modal.open" x-transition.opacity @click.self="modal.open = false">
+			<div class="adm-modal-backdrop" x-show="modal.open" x-transition.opacity @click.self="modal.open = false" style="display: none;">
 				<div class="adm-modal" x-transition.scale>
 					<div class="adm-modal-header">
 						<div class="adm-modal-title">
@@ -1080,7 +1087,7 @@
 
 			<!-- ===== MODAL: Confirm Revoke ===== -->
 			<div class="adm-modal-backdrop" x-show="confirm.open" x-transition.opacity
-				@click.self="confirm.open = false">
+				@click.self="confirm.open = false" style="display: none;">
 				<div class="adm-modal adm-modal-danger" x-transition.scale>
 					<div class="adm-modal-header">
 						<div class="adm-modal-title" style="color: var(--red);">
@@ -1106,7 +1113,7 @@
 
 			<!-- ===== MODAL: Edit Plan ===== -->
 			<div class="adm-modal-backdrop" x-show="planModal.open" x-transition.opacity
-				@click.self="planModal.open = false">
+				@click.self="planModal.open = false" style="display: none;">
 				<div class="adm-modal adm-modal-wide" x-transition.scale>
 					<div class="adm-modal-header">
 						<div class="adm-modal-title">

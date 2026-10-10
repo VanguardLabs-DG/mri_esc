@@ -3017,7 +3017,14 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
+  pointer-events: auto;
 }
+
+.adm-modal-backdrop[style*="display: none"] {
+  display: none !important;
+  pointer-events: none !important;
+}
+
 
 .adm-modal {
   background: var(--d700);

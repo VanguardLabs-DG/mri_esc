@@ -122,9 +122,11 @@ function adminVipPanel() {
         vehLoading: false,
 
         init() {
-            this.loadPlans();
-            this.loadItems();
-            this.loadVehicles();
+            if (Alpine.store('ui')?.isAdmin) {
+                this.loadPlans();
+                this.loadItems();
+                this.loadVehicles();
+            }
             this._onAdminResult = (e) => {
                 const { operation, result } = e.detail || {};
                 if (result?.success) {
@@ -154,7 +156,7 @@ function adminVipPanel() {
 
         getPlanLabel(tierId) {
             if (!tierId || tierId === 'nenhum') return 'S/ VIP';
-            const plan = (Alpine.store('ui').plans || []).find(p => p.id.toLowerCase() === tierId.toLowerCase());
+            const plan = (Alpine.store('ui').plans || []).find(p => p.id && p.id.toLowerCase() === tierId.toLowerCase());
             return plan ? plan.label : `ID: ${tierId}`;
         },
 
@@ -191,7 +193,7 @@ function adminVipPanel() {
             this.loading = true;
             try {
                 const res = await Nui.post('vipAdminGetPlans');
-                if (Array.isArray(res)) Alpine.store('ui').plans = res;
+                if (Array.isArray(res) && res.length > 0) Alpine.store('ui').plans = res;
             } catch (e) { console.error(e); }
             this.loading = false;
         },
@@ -225,10 +227,11 @@ function adminVipPanel() {
             const q = this.searchPlans.toLowerCase().trim();
             if (!q) return this.plans;
             return this.plans.filter(p => 
-                p.label.toLowerCase().includes(q) || 
-                p.id.toLowerCase().includes(q)
+                (p && p.label ? String(p.label).toLowerCase() : '').includes(q) || 
+                (p && p.id ? String(p.id).toLowerCase() : '').includes(q)
             );
         },
+
 
         async openPlanModal(plan = null) {
             // Always re-fetch plans fresh from server before opening modal
@@ -296,10 +299,11 @@ function adminVipPanel() {
             const q = this.itemSearch.toLowerCase().trim();
             if (!q) return [];
             return this.itemsList.filter(i => 
-                i.label.toLowerCase().includes(q) || 
-                i.name.toLowerCase().includes(q)
+                (i && i.label ? String(i.label).toLowerCase() : '').includes(q) || 
+                (i && i.name ? String(i.name).toLowerCase() : '').includes(q)
             ).slice(0, 10);
         },
+
 
         addReward(item) {
             const exists = this.planModal.rewards.find(r => r.item === item.name);

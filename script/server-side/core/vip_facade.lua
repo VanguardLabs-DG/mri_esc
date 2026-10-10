@@ -11,13 +11,22 @@ local function GetDefaultVipDataFallback(source)
     local jobInfo   = player and player.PlayerData and player.PlayerData.job or {}
     local cid       = player and player.PlayerData and player.PlayerData.citizenid or ""
 
+    local coins = tonumber(moneyData.coin) or 0
+    local gems = tonumber(moneyData.gems) or 0
+    if cid and cid ~= "" and GetResourceState('casas_paulista') == 'started' and exports['casas_paulista'] and exports['casas_paulista'].GetCoins then
+        pcall(function()
+            local c = exports['casas_paulista']:GetCoins(cid)
+            if c ~= nil then coins = tonumber(c) or 0 end
+        end)
+    end
+
     return {
         tier          = 'nenhum',
         label         = "Nenhum",
         salary        = 0,
         inventory     = 100,
-        coins         = tonumber(moneyData.coin) or 0,
-        gems          = tonumber(moneyData.gems) or 0,
+        coins         = coins,
+        gems          = gems,
         benefits      = {},
         interval      = 30,
         timeLeft      = 0,
@@ -55,6 +64,20 @@ lib.callback.register('mri_esc:server:getVipData', function(source)
     -- Fallback gracioso se vanguard_vip estiver temporariamente indisponível
     if not vipData then
         vipData = GetDefaultVipDataFallback(source)
+    else
+        local cid = player.PlayerData.citizenid
+        if (not vipData.coins or vipData.coins == 0) and cid and GetResourceState('casas_paulista') == 'started' and exports['casas_paulista'] and exports['casas_paulista'].GetCoins then
+            pcall(function()
+                local c = exports['casas_paulista']:GetCoins(cid)
+                if c ~= nil then
+                    vipData.coins = tonumber(c) or 0
+                end
+            end)
+        end
+        local moneyData = player.PlayerData.money or {}
+        if not vipData.gems or vipData.gems == 0 then
+            vipData.gems = tonumber(moneyData.gems) or 0
+        end
     end
 
     -- 1. Obter avatar do Discord via vanguard.discord.getAvatar

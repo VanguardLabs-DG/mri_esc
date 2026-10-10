@@ -10,31 +10,59 @@ end)
 
 RegisterNUICallback("openNativeMap", function(_, cb)
     print("[vanguard_esc] NUI Callback 'openNativeMap' received")
+    if cb then cb({ success = true }) end
+
+    SetNuiFocus(false, false)
     closeMenu(true)
     isNativeMapOpen = true
     
     CreateThread(function()
-        Wait(150)
-        ActivateFrontendMenu(GetHashKey("FE_MENU_VERSION_MP_PAUSE"), 0, -1)
-        Wait(100)
-        PauseMenuceptionGoDeeper(0)
+        AnimpostfxStopAll()
+        StopAllScreenEffects()
 
+        -- Garante que o pause menu esteja habilitado na engine caso algum script de admin/zona tenha desativado
+        SetPauseMenuActive(true)
+
+        -- Ativa o menu frontend nativo
+        ActivateFrontendMenu(GetHashKey("FE_MENU_VERSION_SP_PAUSE"), 0, -1)
+
+        -- Aguarda ativamente até que o menu pause esteja de fato ativo no GTA V (timeout de 1.5s)
+        local timeout = GetGameTimer() + 1500
+        while not IsPauseMenuActive() and GetGameTimer() < timeout do
+            Wait(10)
+        end
+
+        if not IsPauseMenuActive() then
+            print("[vanguard_esc] Falha ao abrir o pause menu nativo (timeout)")
+            isNativeMapOpen = false
+            lastMapClose = GetGameTimer()
+            return
+        end
+
+        -- Tempo para o Scaleform (pause_menu_sp_content) instanciar as páginas internas
+        Wait(60)
+        PauseMenuceptionGoDeeper(149)
+
+        -- DEBOUNCE CRÍTICO: descarta inputs dos primeiros 350ms para evitar o falso-positivo do Frame 0
+        Wait(350)
+
+        -- Monitoramento de fechamento do mapa:
+        -- NOTA: O controle 177 (botão direito do mouse) foi removido para permitir desmarcar waypoints sem fechar o mapa.
         while isNativeMapOpen and IsPauseMenuActive() do
             Wait(0)
             if IsControlJustPressed(0, 200) or IsDisabledControlJustPressed(0, 200)
             or IsControlJustPressed(0, 199) or IsDisabledControlJustPressed(0, 199)
-            or IsControlJustPressed(0, 202) or IsDisabledControlJustPressed(0, 202)
-            or IsControlJustPressed(0, 177) or IsDisabledControlJustPressed(0, 177) then
+            or IsControlJustPressed(0, 202) or IsDisabledControlJustPressed(0, 202) then
                 SetFrontendActive(false)
                 break
             end
         end
+
         lastMapClose = GetGameTimer()
         isNativeMapOpen = false
     end)
-
-    if cb then cb({ success = true }) end
 end)
+
 
 
 RegisterNUICallback("config", function(_, cb)

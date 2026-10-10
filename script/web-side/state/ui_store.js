@@ -113,6 +113,12 @@ document.addEventListener('alpine:init', () => {
         init(data) {
             if (!data) return;
             this.player = { ...this.player, ...data };
+            if (data.coins !== undefined) {
+                this.player.coins = Number(data.coins) || 0;
+            }
+            if (data.gems !== undefined) {
+                this.player.gems = Number(data.gems) || 0;
+            }
             if (data.isAdmin !== undefined) this.isAdmin = data.isAdmin;
             if (data.vip) this.updateVip(data.vip);
         },
@@ -125,7 +131,8 @@ document.addEventListener('alpine:init', () => {
             this.vip.label          = data.label    || 'Sem VIP';
             this.vip.salary         = data.salary   || 0;
             this.vip.inventory      = data.inventory|| 0;
-            this.vip.coins          = data.coins    || 0;
+            this.vip.coins          = data.coins !== undefined ? Number(data.coins) || 0 : 0;
+            this.vip.gems           = data.gems !== undefined ? Number(data.gems) || 0 : 0;
             this.vip.benefits       = Array.isArray(data.benefits) ? data.benefits : [];
             
             // Time Metrics
@@ -281,7 +288,6 @@ document.addEventListener('alpine:init', () => {
                         this.player.gems = res.newGems;
                         if (this.vip) {
                             this.vip.gems = res.newGems;
-                            this.vip.coins = res.newGems;
                         }
                     }
                     setTimeout(() => {
@@ -415,7 +421,7 @@ document.addEventListener('alpine:init', () => {
             const cleanVip = {
                 tier: v.tier || 'nenhum',
                 label: v.label || 'Nenhum',
-                gems: Number(v.gems ?? v.coins) || 0
+                gems: Number(v.gems !== undefined ? v.gems : p.gems) || 0
             };
 
             this.safePostMessage(id, {
