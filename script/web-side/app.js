@@ -8,6 +8,35 @@ const App = {
     init() {
         this.setupEventListeners();
         this.preloadPlugins();
+        this.warmTextures();
+        setTimeout(() => {
+            const store = Alpine?.store('ui');
+            if (store) {
+                if (store.loadComandos) store.loadComandos();
+                if (store.loadMira) store.loadMira();
+            }
+        }, 300);
+    },
+
+    warmTextures() {
+        const criticalTextures = [
+            'assets/distrito_logo.png?v=5.0',
+            'assets/banner_car.png?v=5.0',
+            'assets/banner_garage.png?v=5.0',
+            'assets/card_city.png?v=5.0',
+            'assets/card_crown.png?v=5.0',
+            'assets/card_map_art.png?v=5.0',
+            'assets/card_reticle.png?v=5.0',
+            'assets/gem_diamond.png'
+        ];
+
+        criticalTextures.forEach(src => {
+            const img = new Image();
+            img.src = src;
+            if (typeof img.decode === 'function') {
+                img.decode().catch(() => {});
+            }
+        });
     },
 
     preloadPlugins() {
@@ -78,18 +107,26 @@ const App = {
 
         switch (action) {
             case 'showMenu':
-                store.player = {
-                    name: Utils.sanitize(data.nome),
-                    id: data.id,
-                    job: Utils.sanitize(data.job),
-                    money: Number(data.money) || 0,
-                    bank: Number(data.bank) || 0,
-                    gems: data.gems !== undefined ? Number(data.gems) : (data.vip?.gems || 0),
-                    coins: data.coins !== undefined ? Number(data.coins) : (data.vip?.coins || 0),
-                    playersOn: data.playersOn,
-                    avatar: data.avatar || '',
-                    location: data.location || ''
-                };
+                // Fast Wake-Up: reutiliza 100% da árvore DOM já rasterizada em GPU sem re-renderizar
+                if (data.fast && store.isHydrated) {
+                    if (data.money !== undefined) store.player.money = Number(data.money) || 0;
+                    if (data.bank !== undefined) store.player.bank = Number(data.bank) || 0;
+                    if (data.playersOn !== undefined) store.player.playersOn = data.playersOn;
+                    store.isOpen = true;
+                    document.documentElement.classList.remove('cef-dormant');
+                    store.startPaycheckTimer();
+                    if (data.initialTab) {
+                        if (data.initialTab.startsWith('plugin:')) {
+                            store.openPlugin(data.initialTab.replace('plugin:', ''));
+                        } else {
+                            store.activeTab = data.initialTab;
+                        }
+                    }
+                    break;
+                }
+
+                // Initial Full Hydration (só roda 1 vez na inicialização)
+                store.patchPlayer(data);
                 if (data.vip) store.updateVip(data.vip);
                 if (data.vip?.mira) {
                     store.mira = { ...store.mira, ...data.vip.mira };
@@ -98,8 +135,10 @@ const App = {
                 }
                 if (data.tabs) store.tabs = data.tabs;
                 store.isAdmin   = data.isAdmin || false;
+                store.isHydrated = true;
                 store.isOpen    = true;
                 document.documentElement.classList.remove('cef-dormant');
+                store.startPaycheckTimer();
 
                 if (data.initialTab) {
                     if (data.initialTab.startsWith('plugin:')) {
@@ -124,6 +163,7 @@ const App = {
 
             case 'hideMenu':
                 store.isOpen = false;
+                store.stopPaycheckTimer();
                 document.documentElement.classList.add('cef-dormant');
                 if (store.plugins && store.plugins.length) {
                     store.plugins.forEach(p => store.notifyPluginVisibility(p.id, false));
@@ -182,6 +222,12 @@ const App = {
                 if (data.vip) store.updateVip(data.vip);
                 if (data.gems !== undefined) store.player.gems = Number(data.gems) || 0;
                 if (data.coins !== undefined) store.player.coins = Number(data.coins) || 0;
+                break;
+
+            case 'updatePlayersOn':
+                if (store.player && data.playersOn !== undefined) {
+                    store.player.playersOn = data.playersOn;
+                }
                 break;
 
             case 'updateGems':

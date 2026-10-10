@@ -6,7 +6,21 @@
 -- seamlessly inside vanguard_esc NUI with state preservation (Keep-Alive).
 -- =========================================================================
 
-local Plugins = {}
+local Plugins = {
+    gem_store = {
+        id              = 'gem_store',
+        label           = 'Loja de Gemas',
+        icon            = 'fa-solid fa-gem',
+        resource        = 'dp_sistema_gemas',
+        htmlPath        = 'esc/index.html',
+        category        = 'loja',
+        order           = 10,
+        badge           = 'LOJA',
+        requiredPerms   = {},
+        description     = 'Loja oficial de Gemas, Benefícios e Vouchers',
+        defaultRoute    = 'plugin:gem_store'
+    }
+}
 local ready = false
 
 ---Checks if player has permission to access a plugin
@@ -33,7 +47,7 @@ end
 ---Filters plugins list for a specific player based on ACE / permissions
 ---@param source number
 ---@return table<string, table>
-function GetPluginsForSource(source)
+local function GetPluginsForSource(source)
     local visible = {}
     for id, manifest in pairs(Plugins) do
         if HasPluginPerms(source, manifest.requiredPerms) then

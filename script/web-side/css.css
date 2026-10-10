@@ -95,12 +95,15 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
+  contain: strict;
+  will-change: transform;
 }
 
 #canvas-mira-permanente {
   width: 200px;
   height: 200px;
   display: block;
+  contain: strict;
 }
 
 /* ================================================
@@ -801,22 +804,22 @@ body {
 
 .blue-icon {
   color: #00e5ff;
-  filter: drop-shadow(0 0 8px rgba(0, 229, 255, 0.5));
+  text-shadow: 0 0 8px rgba(0, 229, 255, 0.5);
 }
 
 .purple-icon {
   color: #a855f7;
-  filter: drop-shadow(0 0 8px rgba(168, 85, 247, 0.5));
+  text-shadow: 0 0 8px rgba(168, 85, 247, 0.5);
 }
 
 .green-icon {
   color: #10b981;
-  filter: drop-shadow(0 0 8px rgba(16, 185, 129, 0.5));
+  text-shadow: 0 0 8px rgba(168, 185, 129, 0.5);
 }
 
 .gold-icon {
   color: #f5b945;
-  filter: drop-shadow(0 0 10px rgba(245, 185, 69, 0.65));
+  text-shadow: 0 0 10px rgba(245, 185, 69, 0.65);
 }
 
 .terminal-prompt {
@@ -873,7 +876,6 @@ body {
   box-shadow: 0 0 10px rgba(245, 185, 69, 0.5);
 }
 
-/* Card Artworks */
 .qc-artwork {
   position: absolute;
   right: 0;
@@ -885,8 +887,14 @@ body {
   background-position: right center;
   background-repeat: no-repeat;
   opacity: 0.75;
-  mask-image: linear-gradient(to right, transparent 0%, black 50%);
-  -webkit-mask-image: linear-gradient(to right, transparent 0%, black 50%);
+}
+
+.qc-artwork::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to right, rgba(10, 10, 15, 1) 0%, rgba(10, 10, 15, 0) 50%);
+  pointer-events: none;
 }
 
 .qc-art-crown {
@@ -975,8 +983,15 @@ body {
   background-size: cover;
   background-position: right center;
   opacity: 0.65;
-  mask-image: linear-gradient(to right, transparent 0%, black 40%);
-  -webkit-mask-image: linear-gradient(to right, transparent 0%, black 40%);
+  pointer-events: none;
+}
+
+.gems-teaser-art::after,
+.vip-teaser-art::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to right, rgba(10, 10, 14, 1) 0%, rgba(10, 10, 14, 0) 40%);
   pointer-events: none;
 }
 
@@ -990,8 +1005,6 @@ body {
   background-size: cover;
   background-position: right center;
   opacity: 0.65;
-  mask-image: linear-gradient(to right, transparent 0%, black 40%);
-  -webkit-mask-image: linear-gradient(to right, transparent 0%, black 40%);
   pointer-events: none;
 }
 
@@ -1598,24 +1611,26 @@ body {
   color: var(--t1);
 }
 
-/* CTA Block */
+/* CTA Block com Zero-Paint GPU Glow */
 .cta-vip-block {
   background: linear-gradient(135deg, rgba(255, 215, 0, 0.07), rgba(255, 140, 0, 0.03));
-  border-color: rgba(255, 215, 0, 0.15);
-  animation: cta-pulse 4s ease infinite;
+  border-color: rgba(255, 215, 0, 0.25);
+  position: relative;
+  isolation: isolate;
 }
 
-@keyframes cta-pulse {
-
-  0%,
-  100% {
-    border-color: rgba(255, 215, 0, 0.15);
-  }
-
-  50% {
-    border-color: rgba(255, 215, 0, 0.35);
-    box-shadow: 0 0 22px var(--gold-glow);
-  }
+.cta-vip-block::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  border: 1px solid rgba(255, 215, 0, 0.45);
+  box-shadow: 0 0 22px var(--gold-glow);
+  opacity: 0.2;
+  will-change: opacity;
+  animation: gpu-pulse-opacity 3.5s ease-in-out infinite;
+  pointer-events: none;
+  z-index: -1;
 }
 
 .cta-plan-name {
@@ -1780,7 +1795,7 @@ body {
 .vm-crown {
   font-size: 32px;
   color: #ffd700;
-  filter: drop-shadow(0 0 12px rgba(245, 185, 69, 0.65));
+  text-shadow: 0 0 12px rgba(245, 185, 69, 0.65);
   margin-bottom: 6px;
 }
 
@@ -2012,7 +2027,22 @@ body {
 .mc-danger {
   background: linear-gradient(rgba(5, 5, 10, 0.6), rgba(5, 5, 10, 0.6)) padding-box,
     linear-gradient(135deg, var(--red), transparent) border-box !important;
-  animation: danger-pulse 2s ease infinite;
+  position: relative;
+  isolation: isolate;
+}
+
+.mc-danger::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  border: 1px solid rgba(255, 71, 87, 0.5);
+  box-shadow: 0 0 16px rgba(255, 71, 87, 0.3);
+  opacity: 0.2;
+  will-change: opacity;
+  animation: gpu-pulse-opacity 2s ease-in-out infinite;
+  pointer-events: none;
+  z-index: -1;
 }
 
 .mc-gold {
@@ -3790,16 +3820,28 @@ body {
 .plugin-panel-container {
   width: 100%;
   height: 100%;
+  min-height: 100vh;
   position: relative;
   overflow: hidden;
   display: flex;
   flex-direction: column;
   background: transparent;
+  transform: translateZ(0);
+  will-change: transform, opacity;
+}
+
+.plugin-panel-container.is-hidden {
+  visibility: hidden !important;
+  opacity: 0 !important;
+  position: absolute !important;
+  pointer-events: none !important;
+  transform: translate3d(-9999px, 0, 0) !important;
 }
 
 .plugin-iframe {
   width: 100%;
   height: 100%;
+  min-height: 100vh;
   flex: 1;
   border: none;
   background: transparent;
@@ -3825,5 +3867,85 @@ body {
 
 .plugin-loading-spinner i {
   font-size: 28px;
-  filter: drop-shadow(0 0 8px rgba(0, 229, 255, 0.8));
+  text-shadow: 0 0 8px rgba(0, 229, 255, 0.8);
+}
+
+/* ==========================================================================
+   ⚡ PERFORMANCE ENGINE — ZERO-PAINT GPU PIPELINE & CONTAINMENT (FASE 1)
+   ========================================================================== */
+
+/* 1. Hardware-Accelerated Zero-Paint Keyframes */
+@keyframes gpu-pulse-opacity {
+  0%, 100% {
+    opacity: 0.18;
+  }
+  50% {
+    opacity: 0.90;
+  }
+}
+
+@keyframes float-y {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+/* 2. Zero-Drop GPU Texture Dormancy Engine (.cef-dormant) */
+html.cef-dormant *,
+html.cef-dormant *::before,
+html.cef-dormant *::after {
+  animation-play-state: paused !important;
+}
+
+html.cef-dormant .app-wrapper,
+html.cef-dormant .containerFake {
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+/* 3. CSS Containment & GPU Layer Tree (Instant Tab Swaps & Zero-Paint) */
+.panel-content,
+.panel-vip,
+.panel-loja {
+  contain: content;
+  transform: translateZ(0);
+  will-change: auto;
+}
+
+.cmd-list {
+  contain: content;
+}
+
+.cmd-item {
+  contain: layout style;
+}
+
+.adm-table-wrap {
+  contain: strict;
+  transform: translateZ(0);
+}
+
+.adm-table-row {
+  contain: layout style;
+}
+
+.plans-grid {
+  contain: layout style;
+}
+
+/* 4. Microfrontend Offscreen Layer Stacking (Instant 0ms Tab Switching) */
+.plugin-iframe-wrapper {
+  contain: strict;
+  transform: translateZ(0);
+  will-change: visibility;
+}
+
+.plugin-iframe-wrapper.is-hidden {
+  visibility: hidden !important;
+  position: absolute !important;
+  pointer-events: none !important;
 }

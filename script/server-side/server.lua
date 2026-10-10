@@ -2,22 +2,25 @@
 --  mri_esc — Main Server Entry Point
 -- =============================================================
 
--- Global paycheck interval accessed by modules
-paycheckInterval = 1 
-exports('GetPaycheckInterval', function() return paycheckInterval end)
+ServerState = ServerState or {}
+ServerState.paycheckInterval = (Config and Config.Timings and Config.Timings.paycheckIntervalMin) or 30
+
+-- Backward compatibility alias
+paycheckInterval = ServerState.paycheckInterval
+exports('GetPaycheckInterval', function() return ServerState.paycheckInterval end)
 
 -- Resource startup sequence
 CreateThread(function()
-    print("^4[mri_esc]^7 Initializing atomic structure...")
+    print("^4[vanguard_esc]^7 Inicializando arquitetura atômica...")
     
-    -- Verification of critical dependencies
+    -- Verificação de dependências críticas
     if GetResourceState('ox_lib') ~= 'started' then
-        print("^1[mri_esc] ERROR: ox_lib is required for this resource to function correctly!^7")
+        print("^1[vanguard_esc] ERRO: ox_lib é necessário para este resource!^7")
     end
     
     if GetResourceState('qbx_core') ~= 'started' then
-        print("^1[mri_esc] ERROR: qbx_core is required!^7")
+        print("^1[vanguard_esc] ERRO: qbx_core é necessário!^7")
     end
 
-    print("^2[mri_esc] Server-side refactor complete.^7")
+    print("^2[vanguard_esc] Inicialização server-side concluída com sucesso.^7")
 end)

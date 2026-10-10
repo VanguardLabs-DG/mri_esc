@@ -67,38 +67,46 @@ CreateThread(function()
     end
 end)
 
--- Main render loop/thread for crosshair
+-- Main render loop/thread for crosshair com dynamic sleep throttling
 CreateThread(function()
+    local hudReticle = (Config and Config.Controls and Config.Controls.hudReticle) or 14
+    local idleSleep = (Config and Config.Timings and Config.Timings.crosshairIdleMs) or 500
+    local activeSleep = (Config and Config.Timings and Config.Timings.crosshairActiveMs) or 0
+
     while true do
-        Wait(0)
+        local sleep = idleSleep
         if miraConfig and miraConfig.ativo then
-            HideHudComponentThisFrame(14) -- Hide native crosshair
+            sleep = activeSleep
+            HideHudComponentThisFrame(hudReticle) -- Oculta retícula nativa
         end
+        Wait(sleep)
     end
 end)
 
 -- Eventos de ciclo de vida do Qbox / QBCore para sincronização automática
 RegisterNetEvent('QBCore:Client:OnPlayerLoaded', function()
-    CheckQboxMiraPersistence()
+    pcall(CheckQboxMiraPersistence)
 end)
 
 RegisterNetEvent('qbx_core:client:playerLoaded', function()
-    CheckQboxMiraPersistence()
+    pcall(CheckQboxMiraPersistence)
 end)
 
 RegisterNetEvent('QBCore:Player:SetPlayerData', function(val)
-    if val and val.metadata and (val.metadata.mira or val.metadata.crosshair) then
-        SyncMiraFromData(val.metadata.mira or val.metadata.crosshair, true)
-    end
+    pcall(function()
+        if val and val.metadata and (val.metadata.mira or val.metadata.crosshair) then
+            SyncMiraFromData(val.metadata.mira or val.metadata.crosshair, true)
+        end
+    end)
 end)
 
 -- Eventos de rede / locais para sincronizar a mira
 RegisterNetEvent('mri_esc:client:syncMira', function(config)
-    SyncMiraFromData(config, true)
+    pcall(SyncMiraFromData, config, true)
 end)
 
 RegisterNetEvent('mri_esc:client:setMira', function(config)
-    SyncMiraFromData(config, true)
+    pcall(SyncMiraFromData, config, true)
 end)
 
 -- Exports for external interaction

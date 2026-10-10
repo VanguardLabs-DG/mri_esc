@@ -101,40 +101,60 @@ lib.callback.register('mri_esc:server:getVipData', function(source)
 end)
 
 -- ─────────────────────────────────────────────────────────────
---  GLOBAL HELPERS & BACKWARD COMPATIBILITY EXPORTS
+--  HELPERS & BACKWARD COMPATIBILITY EXPORTS
 -- ─────────────────────────────────────────────────────────────
 
-GrantVip = function(...)
+local function GrantVip(...)
     if GetResourceState('vanguard_vip') == 'started' then
-        return exports['vanguard_vip']:GrantVip(...)
+        local ok, res, err = pcall(function(...)
+            return exports['vanguard_vip']:GrantVip(...)
+        end, ...)
+        if ok then return res, err end
+        return false, tostring(res)
     end
     return false, "Resource vanguard_vip não iniciado."
 end
 
-RevokeVip = function(...)
+local function RevokeVip(...)
     if GetResourceState('vanguard_vip') == 'started' then
-        return exports['vanguard_vip']:RevokeVip(...)
+        local ok, res, err = pcall(function(...)
+            return exports['vanguard_vip']:RevokeVip(...)
+        end, ...)
+        if ok then return res, err end
+        return false, tostring(res)
     end
     return false, "Resource vanguard_vip não iniciado."
 end
 
-ExtendVip = function(...)
+local function ExtendVip(...)
     if GetResourceState('vanguard_vip') == 'started' then
-        return exports['vanguard_vip']:ExtendVip(...)
+        local ok, res, err = pcall(function(...)
+            return exports['vanguard_vip']:ExtendVip(...)
+        end, ...)
+        if ok then return res, err end
+        return false, tostring(res)
     end
     return false, "Resource vanguard_vip não iniciado."
 end
 
-GetVipConfigs = function(...)
+local function GetVipConfigs(...)
     if GetResourceState('vanguard_vip') == 'started' then
-        return exports['vanguard_vip']:GetVipConfigs(...)
+        local ok, res = pcall(function(...)
+            return exports['vanguard_vip']:GetVipConfigs(...)
+        end, ...)
+        if ok and res then return res end
+        return {}
     end
     return {}
 end
 
-SafeGetVipRecord = function(...)
+local function SafeGetVipRecord(...)
     if GetResourceState('vanguard_vip') == 'started' then
-        return exports['vanguard_vip']:SafeGetVipRecord(...)
+        local ok, res = pcall(function(...)
+            return exports['vanguard_vip']:SafeGetVipRecord(...)
+        end, ...)
+        if ok then return res end
+        return nil
     end
     return nil
 end

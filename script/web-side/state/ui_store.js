@@ -1,10 +1,22 @@
-/**
- * ui_store.js - Alpine.js Central Store
- */
+const DEFAULT_PLUGINS = [
+    {
+        id: 'gem_store',
+        label: 'Loja de Gemas',
+        icon: 'fa-solid fa-gem',
+        resource: 'dp_sistema_gemas',
+        htmlPath: 'esc/index.html',
+        category: 'loja',
+        order: 10,
+        badge: 'LOJA',
+        description: 'Loja oficial de Gemas, Benefícios e Vouchers'
+    }
+];
 
 document.addEventListener('alpine:init', () => {
     Alpine.store('ui', {
         isOpen: false,
+        isHydrated: false,
+        _miraLoaded: false,
         activeTab: 'inicio',
         isAdmin: false,
         adminList: [],
@@ -91,9 +103,9 @@ document.addEventListener('alpine:init', () => {
                 ]
             }
         ],
-        plugins: [],
+        plugins: [ ...DEFAULT_PLUGINS ],
         loadedPlugins: {},
-        mountedPlugins: {},
+        mountedPlugins: { gem_store: true },
         activePluginTarget: null,
         tabs: [
             { id: 'inicio', label: 'INÍCIO', icon: 'fa-bars', action: 'inicio' },
@@ -168,25 +180,50 @@ document.addEventListener('alpine:init', () => {
             this.startPaycheckTimer();
         },
 
+        patchPlayer(data) {
+            if (!data) return;
+            const patch = {
+                name: Utils.sanitize(data.nome || data.name),
+                id: data.id !== undefined ? data.id : this.player.id,
+                job: Utils.sanitize(data.job || this.player.job),
+                money: data.money !== undefined ? Number(data.money) : this.player.money,
+                bank: data.bank !== undefined ? Number(data.bank) : this.player.bank,
+                gems: data.gems !== undefined ? Number(data.gems) : (data.vip?.gems !== undefined ? Number(data.vip.gems) : this.player.gems),
+                coins: data.coins !== undefined ? Number(data.coins) : (data.vip?.coins !== undefined ? Number(data.vip.coins) : this.player.coins),
+                playersOn: data.playersOn !== undefined ? data.playersOn : this.player.playersOn,
+                avatar: data.avatar || this.player.avatar || '',
+                location: data.location || this.player.location || ''
+            };
+            Utils.shallowPatch(this.player, patch);
+        },
+
         startPaycheckTimer() {
             if (this.paycheckInterval) clearInterval(this.paycheckInterval);
+            if (!this.isOpen) return;
             if (this.vip.paycheckTime <= 0) this.vip.paycheckTime = this.vip.paycheckMax;
             this.paycheckInterval = setInterval(() => {
+                if (!this.isOpen) {
+                    this.stopPaycheckTimer();
+                    return;
+                }
                 if (this.vip.paycheckTime > 0) this.vip.paycheckTime--;
                 else this.vip.paycheckTime = this.vip.paycheckMax;
             }, 1000);
         },
 
+        stopPaycheckTimer() {
+            if (this.paycheckInterval) {
+                clearInterval(this.paycheckInterval);
+                this.paycheckInterval = null;
+            }
+        },
+
         formatTime(seconds) {
-            if (seconds == null || isNaN(seconds)) return "0:00";
-            const m = Math.floor(seconds / 60);
-            const s = seconds % 60;
-            return `${m}:${s < 10 ? '0' : ''}${s}`;
+            return FastFormat.formatTime(seconds);
         },
 
         formatDate(unixTs) {
-            if (!unixTs || unixTs === 0) return 'Não registrada';
-            return new Date(unixTs * 1000).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+            return FastFormat.formatDate(unixTs);
         },
         
         getPaycheckProgress() {
@@ -195,15 +232,19 @@ document.addEventListener('alpine:init', () => {
         },
 
         async loadMira() {
-            const res = await Nui.post('consultMira');
+            if (this._miraLoaded) return;
+            const res = await Nui.cachedPost('consultMira', {}, 60000);
             if (res?.tabela) {
                 this.mira = { ...this.mira, ...res.tabela };
+                this._miraLoaded = true;
                 window.miraPreview?.draw(this.mira);
             }
         },
 
         async saveMiraToServer(miraData) {
             const data = miraData !== undefined ? miraData : this.mira;
+            Nui.clearCache('consultMira');
+            this._miraLoaded = false;
             return await Nui.post('saveMira', data);
         },
 
@@ -212,7 +253,8 @@ document.addEventListener('alpine:init', () => {
         },
 
         async loadComandos() {
-            const res = await Nui.post('consultComandos');
+            if (this.comandos && this.comandos.length > 0) return;
+            const res = await Nui.cachedPost('consultComandos', {}, 60000);
             if (res?.tabela) this.comandos = res.tabela;
         },
 
@@ -329,14 +371,20 @@ document.addEventListener('alpine:init', () => {
         },
 
         setPlugins(list) {
-            if (!list) {
-                this.plugins = [];
-                return;
+            const rawArr = Array.isArray(list) ? list : (list ? Object.values(list) : []);
+            const map = new Map();
+            // Pre-seed plugins nativos essenciais (gem_store)
+            for (const def of DEFAULT_PLUGINS) {
+                map.set(def.id, { ...def });
             }
-            const rawArr = Array.isArray(list) ? list : Object.values(list);
-            const arr = rawArr.filter(p => p && typeof p === 'object' && p.id);
-            this.plugins = arr.sort((a, b) => (Number(a.order) || 100) - (Number(b.order) || 100));
-            // Pre-mount all plugins so they are pre-warmed, cached, and render with zero latency
+            // Mescla plugins dinâmicos vindos do servidor
+            for (const p of rawArr) {
+                if (p && typeof p === 'object' && p.id) {
+                    map.set(p.id, { ...(map.get(p.id) || {}), ...p });
+                }
+            }
+            this.plugins = Array.from(map.values()).sort((a, b) => (Number(a.order) || 100) - (Number(b.order) || 100));
+            // Pre-mount de todos os plugins para warm-up e zero latência
             for (const p of this.plugins) {
                 this.mountedPlugins[p.id] = true;
             }
@@ -353,7 +401,7 @@ document.addEventListener('alpine:init', () => {
             const iframe = document.getElementById('plugin-iframe-' + id);
             if (!iframe || !iframe.contentWindow) return false;
             try {
-                // Strip all Alpine.js reactive Proxies, non-clonable getters, and symbols
+                // Remove proxies do Alpine.js e símbolos não clonáveis
                 const cleanPayload = JSON.parse(JSON.stringify(message));
                 iframe.contentWindow.postMessage(cleanPayload, '*');
                 return true;
@@ -364,6 +412,14 @@ document.addEventListener('alpine:init', () => {
         },
 
         openPlugin(id, opts) {
+            // Garante que o plugin exista no store mesmo antes do sync do servidor
+            if (!this.plugins.some(p => p.id === id)) {
+                const def = DEFAULT_PLUGINS.find(p => p.id === id);
+                if (def) {
+                    this.plugins.push({ ...def });
+                }
+            }
+
             this.mountedPlugins[id] = true;
             const previousTab = this.activeTab;
             this.activeTab = 'plugin:' + id;
@@ -375,22 +431,25 @@ document.addEventListener('alpine:init', () => {
                 this.notifyPluginVisibility(prevId, false);
             }
 
+            // Disparo proativo imediato de inicialização e visibilidade
+            this.sendPluginInit(id);
+            this.notifyPluginVisibility(id, true);
+            this.safePostMessage(id, {
+                type: 'mri-plugin/updateGems',
+                gems: Number(this.player?.gems) || 0
+            });
+
             if (this.loadedPlugins[id]) {
                 this.sendPluginNavigate(id, opts);
-                if (this.isOpen) {
-                    this.notifyPluginVisibility(id, true);
-                    this.safePostMessage(id, {
-                        type: 'mri-plugin/updateGems',
-                        gems: Number(this.player?.gems) || 0
-                    });
-                }
             } else {
-                // Safety timeout: unblock spinner if iframe load stalls or resource stopped
+                // Timeout defensivo de 2s para desbloquear o spinner se o iframe demorar a responder
                 setTimeout(() => {
                     if (!this.loadedPlugins[id] && this.activeTab === ('plugin:' + id)) {
                         this.loadedPlugins[id] = true;
+                        this.sendPluginInit(id);
+                        this.notifyPluginVisibility(id, true);
                     }
-                }, 6000);
+                }, 2000);
             }
         },
 

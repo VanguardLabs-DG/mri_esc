@@ -209,7 +209,7 @@
 		<main class="main-panel">
 
 			<!-- ======= INÍCIO ======= -->
-			<div class="panel-content" x-show="store.activeTab === 'inicio'" x-transition.opacity>
+			<div class="panel-content" x-show="store.activeTab === 'inicio'">
 
 				<div class="panel-heading">
 					<div class="panel-title"><i class="fa-solid fa-house"></i> BEM-VINDO</div>
@@ -312,7 +312,7 @@
 			</div>
 
 			<!-- ======= VIP ======= -->
-			<div class="panel-vip" x-show="store.activeTab === 'vip'" x-transition.opacity>
+			<div class="panel-vip" x-show="store.activeTab === 'vip'">
 
 				<!-- Hero Banner -->
 				<div class="vip-hero" :class="store.vip.tier !== 'nenhum' ? 'hero-active' : 'hero-inactive'">
@@ -565,7 +565,7 @@
 			</div>
 
 			<!-- ======= COMANDOS ======= -->
-			<div class="panel-content" x-show="store.activeTab === 'comandos'" x-transition.opacity>
+			<div class="panel-content" x-show="store.activeTab === 'comandos'">
 				<div class="panel-heading">
 					<div class="panel-title"><i class="fa-solid fa-terminal"></i> COMANDOS</div>
 					<div class="panel-subtitle">Clique em <b>EXECUTAR</b> para usar o comando</div>
@@ -598,7 +598,7 @@
 
 
 			<!-- ======= MIRA ======= -->
-			<div class="panel-content" x-show="store.activeTab === 'mira'" x-transition.opacity
+			<div class="panel-content" x-show="store.activeTab === 'mira'"
 				x-data="miraComponent()">
 				<div class="panel-heading">
 					<div class="panel-title"><i class="fa-solid fa-crosshairs"></i> MIRA PERSONALIZADA</div>
@@ -707,9 +707,9 @@
 			<!-- ======= DYNAMIC PLUGIN HOST (IFRAMES / KEEP-ALIVE & LAZY LOAD) ======= -->
 			<template x-for="plugin in store.plugins" :key="plugin.id">
 				<div class="panel-content plugin-panel-container"
-					x-show="store.isOpen && store.activeTab === ('plugin:' + plugin.id)"
+					:class="{ 'is-hidden': !store.isOpen || store.activeTab !== ('plugin:' + plugin.id) }"
 					:id="'plugin-panel-' + plugin.id"
-					style="display: none; width: 100%; height: 100%; padding: 0; margin: 0; position: relative; overflow: hidden;">
+					style="width: 100%; height: 100%; padding: 0; margin: 0; position: relative; overflow: hidden;">
 					
 					<!-- Loading spinner while iframe initializes -->
 					<div class="plugin-loading-spinner" x-show="store.mountedPlugins[plugin.id] && !store.loadedPlugins[plugin.id]">
@@ -902,8 +902,8 @@
 					</div>
 				</div>
 
-				<!-- VIP Table -->
-				<div class="adm-table-wrap">
+				<!-- VIP Table (Virtual Scroller Engine) -->
+				<div class="adm-table-wrap" @scroll.passive="onScroll($event)">
 					<div class="adm-table-head">
 						<div class="at-col at-wide">JOGADOR / CID</div>
 						<div class="at-col">PLANO</div>
@@ -914,7 +914,10 @@
 						<div class="at-col at-actions">AÇÕES</div>
 					</div>
 
-					<template x-for="row in filtered()" :key="row.citizenid">
+					<!-- Virtual Spacer Top -->
+					<div :style="'height: ' + virtualPaddingTop + 'px; width: 100%; pointer-events: none;'"></div>
+
+					<template x-for="row in visibleRows" :key="row.citizenid">
 						<div class="adm-table-row" :class="statusClass(row)">
 							<div class="at-col at-wide">
 								<div class="at-name" x-text="row.name || '—'"></div>
@@ -941,8 +944,11 @@
 						</div>
 					</template>
 
+					<!-- Virtual Spacer Bottom -->
+					<div :style="'height: ' + virtualPaddingBottom + 'px; width: 100%; pointer-events: none;'"></div>
+
 					<!-- Empty state -->
-					<div class="adm-empty" x-show="!loading && filtered().length === 0">
+					<div class="adm-empty" x-show="!loading && filteredList.length === 0">
 						<i class="fa-solid fa-inbox"></i>
 						<span>Nenhum VIP encontrado</span>
 					</div>

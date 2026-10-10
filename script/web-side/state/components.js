@@ -44,11 +44,18 @@ function menuComponent() {
             const actions = {
                 'mapa': () => { Nui.post('openNativeMap'); },
                 'config': () => Nui.post('config'),
+                'hud_settings': () => Nui.post('openHudMenu'),
                 'gemas': () => store.openGemasStore(),
                 'loja_gemas': () => store.openGemasStore(),
-                'customizacao': () => { store.activeTab = tab.id; store.loadRedesSociais(); },
-                'comandos': () => { store.activeTab = tab.id; store.loadComandos(); },
-                'mira': () => { store.activeTab = tab.id; store.loadMira(); },
+                'customizacao': () => { store.activeTab = tab.id; },
+                'comandos': () => { 
+                    store.activeTab = tab.id; 
+                    if (!store.comandos || store.comandos.length === 0) store.loadComandos(); 
+                },
+                'mira': () => { 
+                    store.activeTab = tab.id; 
+                    if (!store._miraLoaded) store.loadMira(); 
+                },
                 'default': () => { store.activeTab = tab.id; }
             };
             (actions[tab.action] || actions['default'])();
@@ -121,27 +128,76 @@ function adminVipPanel() {
         vehSearch: '',
         vehLoading: false,
 
+        // Virtual Scroller State (Windowing Engine)
+        rowHeight: 46,
+        scrollTop: 0,
+        viewportHeight: 460,
+        buffer: 5,
+
+        onScroll(e) {
+            this.scrollTop = e.target.scrollTop;
+            if (e.target.clientHeight > 0) {
+                this.viewportHeight = e.target.clientHeight;
+            }
+        },
+
+        get filteredList() {
+            const q = this.search.toLowerCase().trim();
+            if (!q) return this.list;
+            return this.list.filter(r => (r.citizenid && r.citizenid.toLowerCase().includes(q)) || (r.name && r.name.toLowerCase().includes(q)));
+        },
+
+        get totalRows() {
+            return this.filteredList.length;
+        },
+
+        get startIndex() {
+            return Math.max(0, Math.floor(this.scrollTop / this.rowHeight) - this.buffer);
+        },
+
+        get endIndex() {
+            const visibleCount = Math.ceil(this.viewportHeight / this.rowHeight);
+            return Math.min(this.totalRows, this.startIndex + visibleCount + (this.buffer * 2));
+        },
+
+        get visibleRows() {
+            return this.filteredList.slice(this.startIndex, this.endIndex);
+        },
+
+        get virtualPaddingTop() {
+            return this.startIndex * this.rowHeight;
+        },
+
+        get virtualPaddingBottom() {
+            return Math.max(0, (this.totalRows - this.endIndex) * this.rowHeight);
+        },
+
+        filtered() {
+            return this.filteredList;
+        },
+
         init() {
             if (Alpine.store('ui')?.isAdmin) {
                 this.loadPlans();
                 this.loadItems();
                 this.loadVehicles();
             }
-            this._onAdminResult = (e) => {
-                const { operation, result } = e.detail || {};
-                if (result?.success) {
-                    const msgs = { grant: 'VIP concedido!', revoke: 'VIP revogado.', extend: 'VIP renovado!' };
-                    this.showToast('success', msgs[operation] || 'Operação realizada.');
-                } else {
-                    this.showToast('error', result?.error || 'Erro desconhecido');
-                }
-            };
-            window.addEventListener('mri:adminResult', this._onAdminResult);
-            window.addEventListener('mri:cleanup', () => this.destroy());
+            if (!this._onAdminResult) {
+                this._onAdminResult = (e) => {
+                    const { operation, result } = e.detail || {};
+                    if (result?.success) {
+                        const msgs = { grant: 'VIP concedido!', revoke: 'VIP revogado.', extend: 'VIP renovado!' };
+                        this.showToast('success', msgs[operation] || 'Operação realizada.');
+                    } else {
+                        this.showToast('error', result?.error || 'Erro desconhecido');
+                    }
+                };
+                window.addEventListener('mri:adminResult', this._onAdminResult);
+            }
         },
 
         destroy() {
-            if (this._onAdminResult) window.removeEventListener('mri:adminResult', this._onAdminResult);
+            // No-op: Mantém o listener persistente no contexto CEF durante a sessão
         },
 
         showToast(type, msg) {
@@ -150,8 +206,7 @@ function adminVipPanel() {
         },
 
         formatDate(ts) {
-            if (!ts || ts === 0) return 'Não registrada';
-            return new Date(ts * 1000).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+            return FastFormat.formatDate(ts);
         },
 
         getPlanLabel(tierId) {
@@ -160,7 +215,7 @@ function adminVipPanel() {
             return plan ? plan.label : `ID: ${tierId}`;
         },
 
-        formatMoney(n) { return Utils.formatMoney(n); },
+        formatMoney(n) { return FastFormat.formatMoney(n); },
 
         statusClass(row) {
             if (!row.expires_at) return 'st-perm';
@@ -175,12 +230,6 @@ function adminVipPanel() {
             const diff = row.expires_at - Math.floor(Date.now() / 1000);
             if (diff <= 0) return 'EXPIRADO';
             return `${Math.floor(diff / 86400)}d restantes`;
-        },
-
-        filtered() {
-            const q = this.search.toLowerCase().trim();
-            if (!q) return this.list;
-            return this.list.filter(r => r.citizenid?.toLowerCase().includes(q) || r.name?.toLowerCase().includes(q));
         },
 
         async loadList() {
@@ -359,14 +408,13 @@ function adminVipPanel() {
         },
 
         async deletePlan(id) {
-            if (confirm(`Atenção: Deseja realmente excluir o plano "${id}"? Isso não removerá o cargo dos jogadores que já o possuem, mas eles perderão os benefícios.`)) {
-                const res = await Nui.post('vipAdminDeletePlan', { id });
-                if (res && res.success) {
-                    this.showToast('success', 'Plano removido.');
-                    this.loadPlans();
-                } else {
-                    this.showToast('error', res?.error || 'Erro ao excluir.');
-                }
+            if (!id) return;
+            const res = await Nui.post('vipAdminDeletePlan', { id });
+            if (res && res.success) {
+                this.showToast('success', 'Plano removido.');
+                this.loadPlans();
+            } else {
+                this.showToast('error', res?.error || 'Erro ao excluir.');
             }
         }
     };

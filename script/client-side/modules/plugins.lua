@@ -13,11 +13,33 @@ local openedRoutes = {}
 ---Fetches and caches the available plugins for this player
 ---@return table<string, table>
 local function GetPlugins()
-    if not pluginsFetched then
+    if not pluginsFetched or not next(cachedPlugins) then
         local awaitCb = (vanguard and vanguard.callback and vanguard.callback.await) or function(name) return lib.callback.await(name, false) end
-        local p = awaitCb('vanguard_esc:server:getPlugins')
-        cachedPlugins = p or {}
-        pluginsFetched = true
+        local p = nil
+        pcall(function()
+            p = awaitCb('vanguard_esc:server:getPlugins')
+        end)
+        if p and next(p) then
+            cachedPlugins = p
+            pluginsFetched = true
+        elseif not pluginsFetched then
+            cachedPlugins = p or {}
+        end
+    end
+    -- Fallback de segurança garantindo gem_store
+    if not cachedPlugins['gem_store'] then
+        cachedPlugins['gem_store'] = {
+            id           = 'gem_store',
+            label        = 'Loja de Gemas',
+            icon         = 'fa-solid fa-gem',
+            resource     = 'dp_sistema_gemas',
+            htmlPath     = 'esc/index.html',
+            category     = 'loja',
+            order        = 10,
+            badge        = 'LOJA',
+            description  = 'Loja oficial de Gemas, Benefícios e Vouchers',
+            defaultRoute = 'plugin:gem_store'
+        }
     end
     return cachedPlugins
 end

@@ -30,6 +30,5 @@ server_scripts {
 ui_page 'script/web-side/index.html'
 
 files {
-    'script/web-side/*',
     'script/web-side/**'
 }

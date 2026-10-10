@@ -4,11 +4,19 @@
 -- ZERO-CHANGE guarantee for web-side (index.html, ui_store.js, components.js)
 -- =========================================================================
 
+local SafeNUICallback = (EscCore and EscCore.SafeNUICallback) or RegisterNUICallback
+local MIN_SEARCH_QUERY_LEN = 2
+local DEFAULT_VIP_DAYS = 30
+
+local function GetCallbackTimeout()
+    return (Config and Config.Timings and Config.Timings.callbackTimeoutMs) or 2500
+end
+
 local function PushAdminList()
     CreateThread(function()
-        Wait(300)
+        local cbTimeout = GetCallbackTimeout()
         local ok, result = pcall(function()
-            return lib.callback.await('vanguard_vip:server:adminList', false)
+            return lib.callback.await('vanguard_vip:server:adminList', cbTimeout)
         end)
 
         if not ok or not result or not result.list then
@@ -33,129 +41,139 @@ end
 --  1. NUI ADMIN CALLBACKS
 -- ─────────────────────────────────────────────────────────────
 
-RegisterNUICallback("vipAdminRefresh", function(_, cb)
-    cb({})
+SafeNUICallback("vipAdminRefresh", function(_, cb)
+    if cb then cb({}) end
     PushAdminList()
 end)
 
-RegisterNUICallback("vipAdminGrant", function(data, cb)
-    cb({})
+SafeNUICallback("vipAdminGrant", function(data, cb)
+    if cb then cb({}) end
     CreateThread(function()
+        local cbTimeout = GetCallbackTimeout()
         local ok, result = pcall(function()
-            return lib.callback.await('vanguard_vip:server:adminGrant', false, {
-                citizenId    = data.citizenId,
-                tier         = data.tier,
-                durationDays = data.durationDays or 30
+            return lib.callback.await('vanguard_vip:server:adminGrant', cbTimeout, {
+                citizenId    = data and data.citizenId,
+                tier         = data and data.tier,
+                durationDays = (data and data.durationDays) or DEFAULT_VIP_DAYS
             })
         end)
 
         local res = (ok and result) or { success = false, error = "Erro ao comunicar com o servidor VIP." }
         SendNUIMessage({ action = 'adminActionResult', operation = 'grant', result = res })
         if res.success then
-            Wait(400)
             PushAdminList()
         end
     end)
 end)
 
-RegisterNUICallback("vipAdminRevoke", function(data, cb)
-    cb({})
+SafeNUICallback("vipAdminRevoke", function(data, cb)
+    if cb then cb({}) end
     CreateThread(function()
+        local cbTimeout = GetCallbackTimeout()
         local ok, result = pcall(function()
-            return lib.callback.await('vanguard_vip:server:adminRevoke', false, {
-                citizenId = data.citizenId
+            return lib.callback.await('vanguard_vip:server:adminRevoke', cbTimeout, {
+                citizenId = data and data.citizenId
             })
         end)
 
         local res = (ok and result) or { success = false, error = "Erro ao comunicar com o servidor VIP." }
         SendNUIMessage({ action = 'adminActionResult', operation = 'revoke', result = res })
         if res.success then
-            Wait(400)
             PushAdminList()
         end
     end)
 end)
 
-RegisterNUICallback("vipAdminExtend", function(data, cb)
-    cb({})
+SafeNUICallback("vipAdminExtend", function(data, cb)
+    if cb then cb({}) end
     CreateThread(function()
+        local cbTimeout = GetCallbackTimeout()
         local ok, result = pcall(function()
-            return lib.callback.await('vanguard_vip:server:adminExtend', false, {
-                citizenId = data.citizenId,
-                tier      = data.tier,
-                days      = data.days
+            return lib.callback.await('vanguard_vip:server:adminExtend', cbTimeout, {
+                citizenId = data and data.citizenId,
+                tier      = data and data.tier,
+                days      = data and data.days
             })
         end)
 
         local res = (ok and result) or { success = false, error = "Erro ao comunicar com o servidor VIP." }
         SendNUIMessage({ action = 'adminActionResult', operation = 'extend', result = res })
         if res.success then
-            Wait(400)
             PushAdminList()
         end
     end)
 end)
 
-RegisterNUICallback("vipAdminSearch", function(data, cb)
+SafeNUICallback("vipAdminSearch", function(data, cb)
     CreateThread(function()
-        if not data.query or #data.query < 2 then cb({}); return end
+        if not data or not data.query or #data.query < MIN_SEARCH_QUERY_LEN then
+            if cb then cb({}) end
+            return
+        end
 
+        local cbTimeout = GetCallbackTimeout()
         local ok, result = pcall(function()
-            return lib.callback.await('vanguard_vip:server:adminSearch', false, {
+            return lib.callback.await('vanguard_vip:server:adminSearch', cbTimeout, {
                 query = data.query
             })
         end)
-        cb((ok and result) or {})
+        if cb then cb((ok and result) or {}) end
     end)
 end)
 
-RegisterNUICallback("vipAdminGetPlans", function(_, cb)
+SafeNUICallback("vipAdminGetPlans", function(_, cb)
+    local cbTimeout = GetCallbackTimeout()
     local ok, plans = pcall(function()
-        return lib.callback.await('vanguard_vip:server:adminGetPlans', false)
+        return lib.callback.await('vanguard_vip:server:adminGetPlans', cbTimeout)
     end)
-    cb((ok and plans) or {})
+    if cb then cb((ok and plans) or {}) end
 end)
 
-RegisterNUICallback("vipAdminSavePlan", function(data, cb)
+SafeNUICallback("vipAdminSavePlan", function(data, cb)
+    local cbTimeout = GetCallbackTimeout()
     local ok, res = pcall(function()
-        return lib.callback.await('vanguard_vip:server:adminSavePlan', false, data)
+        return lib.callback.await('vanguard_vip:server:adminSavePlan', cbTimeout, data)
     end)
-    cb((ok and res) or { success = false, error = "Erro ao salvar plano." })
+    if cb then cb((ok and res) or { success = false, error = "Erro ao salvar plano." }) end
 end)
 
-RegisterNUICallback("vipAdminDeletePlan", function(data, cb)
+SafeNUICallback("vipAdminDeletePlan", function(data, cb)
+    local cbTimeout = GetCallbackTimeout()
     local ok, res = pcall(function()
-        return lib.callback.await('vanguard_vip:server:adminDeletePlan', false, data.id)
+        return lib.callback.await('vanguard_vip:server:adminDeletePlan', cbTimeout, data and data.id)
     end)
-    cb((ok and res) or { success = false, error = "Erro ao excluir plano." })
+    if cb then cb((ok and res) or { success = false, error = "Erro ao excluir plano." }) end
 end)
 
-RegisterNUICallback("vipAdminGetItems", function(_, cb)
+SafeNUICallback("vipAdminGetItems", function(_, cb)
+    local cbTimeout = GetCallbackTimeout()
     local ok, items = pcall(function()
-        return lib.callback.await('vanguard_vip:server:adminGetItems', false)
+        return lib.callback.await('vanguard_vip:server:adminGetItems', cbTimeout)
     end)
-    cb((ok and items) or {})
+    if cb then cb((ok and items) or {}) end
 end)
 
-RegisterNUICallback("vipAdminGetVehicles", function(_, cb)
+SafeNUICallback("vipAdminGetVehicles", function(_, cb)
+    local cbTimeout = GetCallbackTimeout()
     local ok, vehicles = pcall(function()
-        return lib.callback.await('vanguard_vip:server:adminGetVehicles', false)
+        return lib.callback.await('vanguard_vip:server:adminGetVehicles', cbTimeout)
     end)
-    cb((ok and vehicles) or {})
+    if cb then cb((ok and vehicles) or {}) end
 end)
 
 -- ─────────────────────────────────────────────────────────────
 --  2. NUI SHOP CALLBACK (COMPRA COM GEMAS)
 -- ─────────────────────────────────────────────────────────────
 
-RegisterNUICallback("buyVipWithGems", function(data, cb)
+SafeNUICallback("buyVipWithGems", function(data, cb)
     CreateThread(function()
+        local cbTimeout = GetCallbackTimeout()
         local ok, result = pcall(function()
-            return lib.callback.await('vanguard_vip:server:buyWithGems', false, {
+            return lib.callback.await('vanguard_vip:server:buyWithGems', cbTimeout, {
                 tier = data and data.tier
             })
         end)
-        cb((ok and result) or { success = false, error = "Erro ao processar transação no servidor VIP." })
+        if cb then cb((ok and result) or { success = false, error = "Erro ao processar transação no servidor VIP." }) end
     end)
 end)
 
